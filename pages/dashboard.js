@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
-import Layout from '../components/Layout'
 import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -15,16 +15,13 @@ export default function Dashboard() {
     })
   }, [])
 
-  if (!user) return <Layout><div className="p-4 text-center text-white">Lädt...</div></Layout>
+  if (!user) return <div>Lädt...</div>
 
   return (
     <Layout>
       <Navbar />
-      <div className="p-8 text-center">
+      <div className="p-8">
         <h1 className="text-3xl font-bold text-white">Willkommen, {user.email}</h1>
-        <p className="mt-4 text-lg text-gray-700">
-          Dies ist dein Dashboard. Hier findest du alle wichtigen Informationen auf einen Blick.
-        </p>
       </div>
     </Layout>
   )
