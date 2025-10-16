@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
+import Layout from '../components/Layout'
 import Navbar from '../components/Navbar'
 
 export default function Dashboard() {
@@ -14,33 +15,17 @@ export default function Dashboard() {
     })
   }, [])
 
-  if (!user) return <div className="p-4">Lädt...</div>
+  if (!user) return <Layout><div className="p-4 text-center">Lädt...</div></Layout>
 
   return (
-    <>
-      {/* Navbar */}
+    <Layout>
       <Navbar />
-
-      {/* Hauptinhalt mit Hintergrund-Farbverlauf */}
-      <main className="min-h-screen bg-white relative">
-        {/* Farbverlauf oben */}
-        <div
-          className="absolute top-0 left-0 w-full h-64 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, #451a3d, transparent)'
-          }}
-        />
-        
-        {/* Content */}
-        <div className="relative max-w-6xl mx-auto p-8">
-          <h1 className="text-[32px] font-bold font-inter mb-6 text-[#1f1c1f]">
-            Willkommen, {user.email}
-          </h1>
-          <p className="text-[16px] font-inter text-[#1f1c1f]">
-            Das ist dein Dashboard. Alle wichtigen Infos und Statistiken werden hier angezeigt.
-          </p>
-        </div>
-      </main>
-    </>
+      <div className="p-8 text-center">
+        <h1 className="text-3xl font-bold text-black">Willkommen, {user.email}</h1>
+        <p className="mt-4 text-lg text-gray-700">
+          Dies ist dein Dashboard. Hier findest du alle wichtigen Informationen auf einen Blick.
+        </p>
+      </div>
+    </Layout>
   )
 }
