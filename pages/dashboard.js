@@ -1,7 +1,8 @@
+// pages/dashboard.js
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
-import Navbar from '../components/Navbar'
+import { supabase } from '../lib/supabaseClient'
+import Layout from '../components/Layout'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -9,19 +10,24 @@ export default function Dashboard() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/')
-      else setUser(data.session.user)
+      if (!data.session) {
+        router.push('/') // nicht eingeloggt → Login-Seite
+      } else {
+        setUser(data.session.user)
+      }
     })
   }, [])
 
-  if (!user) return <div>Lädt...</div>
+  if (!user) return <div className="p-4">Lädt...</div>
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#451a3d] to-white">
-      <Navbar />
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-white md:text-black">Willkommen, {user.email}</h1>
+    <Layout>
+      <div className="p-8">
+        <h1 className="text-3xl font-bold text-white">Willkommen, {user.email}</h1>
+        <p className="mt-4 text-white text-lg">
+          Dein Dashboard ist jetzt bereit.
+        </p>
       </div>
-    </div>
+    </Layout>
   )
 }
