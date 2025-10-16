@@ -1,11 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
+
 
 export default function Home() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+  // Prüfen, ob der User schon eingeloggt ist
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) {
+      router.push('/dashboard') // Weiterleitung, wenn eingeloggt
+    }
+  })
+
+  // Magic Link Klick abfangen
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      router.push('/dashboard') // Weiterleitung nach Login
+    }
+  })
+
+  return () => {
+    listener.subscription.unsubscribe()
+  }
+}, [])
+
 
   const handleLogin = async () => {
     const { error } = await supabase.auth.signInWithOtp({ email, options: { redirectTo: `${window.location.origin}/dashboard` } })
