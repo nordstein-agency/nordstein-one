@@ -1,14 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx}",
     "./pages/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}"
+    "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       fontFamily: {
-        'inter-tight': ['"Inter Tight"', 'sans-serif']
+        inter: ['"Inter Tight"', 'sans-serif'],
+      },
+      colors: {
+        nordsteinBeige: '#e6ded3',
+        nordsteinPurple: '#451a3d',
       },
     },
   },

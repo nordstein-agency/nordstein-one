@@ -1,5 +1,5 @@
-// components/Navbar.js
 import { supabase } from '../lib/supabaseClient'
+import Link from 'next/link'
 
 export default function Navbar() {
   const handleLogout = async () => {
@@ -8,25 +8,45 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="flex justify-center items-center py-6 gap-6 relative z-20">
-      <button className="text-white font-medium text-[16px] tracking-wide" onClick={() => window.location.href='/dashboard'}>
-        Dashboard
-      </button>
-      <button className="text-white font-medium text-[16px] tracking-wide" onClick={() => window.location.href='/customers'}>
-        Kunden
-      </button>
-      <button className="text-white font-medium text-[16px] tracking-wide" onClick={() => window.location.href='/contracts'}>
-        Verträge
-      </button>
-      <button className="text-white font-medium text-[16px] tracking-wide" onClick={() => window.location.href='/profile'}>
-        Profil
-      </button>
-      <button className="text-white font-medium text-[16px] tracking-wide" onClick={() => window.location.href='/career'}>
-        Karriere
-      </button>
-      <button onClick={handleLogout} className="ml-12 text-red-500 font-medium text-[16px]">
-        Abmelden
-      </button>
-    </nav>
+    <header className="w-full bg-gradient-to-b from-[#451a3d] to-transparent py-6">
+      <nav className="max-w-6xl mx-auto flex items-center justify-center gap-6">
+        <Link
+          href="/dashboard"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
+        >
+          Dashboard
+        </Link>
+        <Link
+          href="/customers"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
+        >
+          Kunden
+        </Link>
+        <Link
+          href="/contracts"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
+        >
+          Verträge
+        </Link>
+        <Link
+          href="/profile"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
+        >
+          Profil
+        </Link>
+        <Link
+          href="/career"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
+        >
+          Karriere
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="text-white font-inter text-[16px] ml-6 hover:text-[#e6ded3]"
+        >
+          Abmelden
+        </button>
+      </nav>
+    </header>
   )
 }

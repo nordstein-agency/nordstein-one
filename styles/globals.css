@@ -1,16 +1,10 @@
-/* styles/globals.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap');
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&display=swap');
 
 body {
   font-family: 'Inter Tight', sans-serif;
-  /*background-color: #ffffff;*/
-  color: #333;
+  background-color: #ffffff; /* Weiß unter dem Header */
+  margin: 0;
+  padding: 0;
 }
 
 a {
