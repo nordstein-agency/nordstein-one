@@ -9,8 +9,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/') // nicht eingeloggt → zurück zur Login-Seite
-      else setUser(data.session.user) // eingeloggt → Dashboard anzeigen
+      if (!data.session) router.push('/')
+      else setUser(data.session.user)
     })
   }, [])
 
@@ -18,15 +18,24 @@ export default function Dashboard() {
 
   return (
     <>
+      {/* Navbar */}
       <Navbar />
 
-      <main className="min-h-screen bg-white p-8">
-        <div className="max-w-6xl mx-auto">
+      {/* Hauptinhalt mit Hintergrund-Farbverlauf */}
+      <main className="min-h-screen bg-white relative">
+        {/* Farbverlauf oben */}
+        <div
+          className="absolute top-0 left-0 w-full h-64 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to bottom, #451a3d, transparent)'
+          }}
+        />
+        
+        {/* Content */}
+        <div className="relative max-w-6xl mx-auto p-8">
           <h1 className="text-[32px] font-bold font-inter mb-6 text-[#1f1c1f]">
             Willkommen, {user.email}
           </h1>
-
-          {/* Hier kannst du später weitere Dashboard-Inhalte einfügen */}
           <p className="text-[16px] font-inter text-[#1f1c1f]">
             Das ist dein Dashboard. Alle wichtigen Infos und Statistiken werden hier angezeigt.
           </p>
