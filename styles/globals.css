@@ -1,9 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&display=swap');
 
 body {
   font-family: 'Inter Tight', sans-serif;
-  color: #1f1c1f;
-  background-color: #ffffff;
+  background: linear-gradient(to bottom, #451a3d 0%, #ffffff 150px);
 }

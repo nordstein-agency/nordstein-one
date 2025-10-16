@@ -1,51 +1,48 @@
 import { supabase } from '../lib/supabaseClient'
-import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 
 export default function Navbar() {
-  const router = useRouter()
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/')
-      else setUser(data.session.user)
-    })
-  }, [])
-
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    window.location.href = '/' // zurück zur Login-Seite
   }
 
-  if (!user) return null
-
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-transparent">
-      <div className="max-w-screen-xl mx-auto px-8 py-4 flex items-center justify-between font-[Inter_Tight]">
-        {/* Logo */}
-        <Link href="/" className="text-white font-bold text-[20px]">
-          Nordstein
+    <nav className="w-full flex justify-center py-6 bg-transparent">
+      <div className="flex items-center gap-6">
+        <Link
+          href="/dashboard"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+        >
+          Dashboard
         </Link>
-
-        {/* Links */}
-        <div className="flex space-x-[24px] items-center">
-          {['Dashboard','Kunden','Verträge','Profil','Karriere'].map((text, i) => (
-            <Link
-              key={i}
-              href={`/${text.toLowerCase()}`}
-              className="text-white text-[16px] font-normal no-underline hover:text-[#e6ded3] transition-colors"
-            >
-              {text}
-            </Link>
-          ))}
-        </div>
-
-        {/* Logout */}
+        <Link
+          href="/customers"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+        >
+          Kunden
+        </Link>
+        <Link
+          href="/contracts"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+        >
+          Verträge
+        </Link>
+        <Link
+          href="/profile"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+        >
+          Profil
+        </Link>
+        <Link
+          href="/career"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+        >
+          Karriere
+        </Link>
         <button
           onClick={handleLogout}
-          className="text-white text-[16px] font-normal hover:text-[#e6ded3] transition-colors ml-6"
+          className="text-white font-inter text-[16px] ml-6 hover:text-[#e6ded3]"
         >
           Abmelden
         </button>
