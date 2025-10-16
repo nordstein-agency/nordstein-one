@@ -1,25 +1,28 @@
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabaseClient'
+import { useRouter } from 'next/router'
 
 export default function Home() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const router = useRouter()
 
+  // Prüfen, ob Benutzer eingeloggt ist
   useEffect(() => {
-    // Listener für Auth-Status
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          // Magic Link erfolgreich -> weiterleiten
-          router.push('/dashboard')
-        }
+    const session = supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.push('/dashboard') // automatisch weiterleiten
       }
-    )
-    return () => {
-      authListener?.unsubscribe()
-    }
+    })
+
+    // Listener für Magic Link / Session-Changes
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        router.push('/dashboard') // weiterleiten nach Login
+      }
+    })
+
+    return () => listener.subscription.unsubscribe()
   }, [])
 
   const handleLogin = async () => {
