@@ -1,7 +1,7 @@
+// pages/dashboard.js
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
-import Navbar from '../components/Navbar'
+import { supabase } from '../lib/supabaseClient'
 import Layout from '../components/Layout'
 
 export default function Dashboard() {
@@ -15,15 +15,15 @@ export default function Dashboard() {
     })
   }, [])
 
-  if (!user) return <Layout><div className="p-4">Lädt...</div></Layout>
+  if (!user) return <div className="p-4">Lädt...</div>
 
   return (
     <Layout>
-      <Navbar />
-      <div className="p-8 text-center">
-        <h1 className="text-3xl font-inter-tight font-semibold text-white">
-          Willkommen, {user.email}
-        </h1>
+      <div className="p-8">
+        <h1 className="text-4xl font-bold text-[#ffffff] mb-8">Willkommen, {user.email}</h1>
+        <p className="text-[#1f1c1f] text-lg">
+          Hier siehst du dein Dashboard mit allen wichtigen Infos.
+        </p>
       </div>
     </Layout>
   )
