@@ -2,5 +2,7 @@
 
 body {
   font-family: 'Inter Tight', sans-serif;
-  background: linear-gradient(to bottom, #451a3d 0%, #ffffff 150px);
+  background-color: #ffffff; /* reiner weißer Hintergrund */
+  margin: 0;
+  padding: 0;
 }

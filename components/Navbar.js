@@ -4,39 +4,39 @@ import Link from 'next/link'
 export default function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/' // zurück zur Login-Seite
+    window.location.href = '/'
   }
 
   return (
-    <nav className="w-full flex justify-center py-6 bg-transparent">
-      <div className="flex items-center gap-6">
+    <header className="w-full bg-gradient-to-b from-[#451a3d] to-transparent py-6">
+      <nav className="max-w-6xl mx-auto flex items-center justify-center gap-6">
         <Link
           href="/dashboard"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
         >
           Dashboard
         </Link>
         <Link
           href="/customers"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
         >
           Kunden
         </Link>
         <Link
           href="/contracts"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
         >
           Verträge
         </Link>
         <Link
           href="/profile"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
         >
           Profil
         </Link>
         <Link
           href="/career"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3] visited:text-white active:text-white"
+          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
         >
           Karriere
         </Link>
@@ -46,7 +46,7 @@ export default function Navbar() {
         >
           Abmelden
         </button>
-      </div>
-    </nav>
+      </nav>
+    </header>
   )
 }
