@@ -22,30 +22,30 @@ export default function Navbar() {
   if (!user) return null
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow z-50">
-      <div className="max-w-screen-xl mx-auto px-8 py-6 flex justify-between items-center font-[Inter_Tight]">
+    <nav className="fixed top-0 left-0 w-full z-50 bg-transparent">
+      <div className="max-w-screen-xl mx-auto px-8 py-4 flex items-center justify-between font-[Inter_Tight]">
         {/* Logo */}
-        <Link href="/" className="text-4xl font-bold text-[#451a3d]">
+        <Link href="/" className="text-white font-bold text-[20px]">
           Nordstein
         </Link>
 
-        {/* Links als Buttons */}
-        <div className="flex space-x-8 justify-center flex-1">
+        {/* Links */}
+        <div className="flex space-x-[24px] items-center">
           {['Dashboard','Kunden','Verträge','Profil','Karriere'].map((text, i) => (
             <Link
               key={i}
               href={`/${text.toLowerCase()}`}
-              className="px-6 py-3 rounded-lg bg-[#e6ded3] text-[#1f1c1f] font-semibold text-xl no-underline hover:bg-[#d2c9b9] transition-colors"
+              className="text-white text-[16px] font-normal no-underline hover:text-[#e6ded3] transition-colors"
             >
               {text}
             </Link>
           ))}
         </div>
 
-        {/* Logout Button */}
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="px-6 py-3 rounded-lg bg-red-500 text-white font-semibold text-xl hover:bg-red-600 transition-colors"
+          className="text-white text-[16px] font-normal hover:text-[#e6ded3] transition-colors ml-6"
         >
           Abmelden
         </button>
