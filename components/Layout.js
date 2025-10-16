@@ -1,10 +1,8 @@
 // components/Layout.js
-import Navbar from './Navbar'
-
 export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-white relative">
-      {/* Farbverlauf nur oben */}
+      {/* Farbverlauf oben */}
       <div
         className="absolute top-0 left-0 w-full h-64 pointer-events-none"
         style={{
@@ -13,10 +11,9 @@ export default function Layout({ children }) {
         }}
       />
 
-      {/* Content über Farbverlauf */}
+      {/* Content über dem Farbverlauf */}
       <div className="relative z-10">
-        <Navbar />
-        <main className="max-w-6xl mx-auto p-8">{children}</main>
+        {children}
       </div>
     </div>
   )

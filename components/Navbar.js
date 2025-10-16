@@ -1,52 +1,48 @@
-import { supabase } from '../lib/supabaseClient'
-import Link from 'next/link'
-
+// components/Navbar.js
 export default function Navbar() {
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/'
-  }
-
   return (
-    <header className="w-full bg-gradient-to-b from-[#451a3d] to-transparent py-6">
-      <nav className="max-w-6xl mx-auto flex items-center justify-center gap-6">
-        <Link
-          href="/dashboard"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
-        >
-          Dashboard
-        </Link>
-        <Link
-          href="/customers"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
-        >
-          Kunden
-        </Link>
-        <Link
-          href="/contracts"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
-        >
-          Verträge
-        </Link>
-        <Link
-          href="/profile"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
-        >
-          Profil
-        </Link>
-        <Link
-          href="/career"
-          className="text-white font-inter text-[16px] no-underline hover:text-[#e6ded3]"
-        >
-          Karriere
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="text-white font-inter text-[16px] ml-6 hover:text-[#e6ded3]"
-        >
-          Abmelden
-        </button>
-      </nav>
-    </header>
+    <nav className="bg-transparent py-4 px-8 flex justify-center space-x-6">
+      <a
+        href="/dashboard"
+        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+      >
+        Dashboard
+      </a>
+      <a
+        href="/customers"
+        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+      >
+        Kunden
+      </a>
+      <a
+        href="/contracts"
+        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+      >
+        Verträge
+      </a>
+      <a
+        href="/profile"
+        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+      >
+        Profil
+      </a>
+      <a
+        href="/career"
+        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+      >
+        Karriere
+      </a>
+      <button
+        onClick={logout}
+        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+      >
+        Abmelden
+      </button>
+    </nav>
   )
+}
+
+async function logout() {
+  await supabase.auth.signOut()
+  window.location.href = '/'
 }
