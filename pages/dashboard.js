@@ -15,14 +15,18 @@ export default function Dashboard() {
     })
   }, [])
 
-  if (!user) return <Layout><div className="p-4 text-black">Lädt...</div></Layout>
+  if (!user) return <div className="text-center mt-20">Lädt...</div>
 
   return (
     <Layout>
       <Navbar />
-      <div className="p-8">
-        <h1 className="text-3xl font-bold text-[#1f1c1f] mb-4">Willkommen, {user.email}</h1>
-        <p className="text-[#1f1c1f] text-base">Hier kannst du deine Dashboard-Infos sehen.</p>
+      <div className="p-8 max-w-5xl mx-auto">
+        <h1 className="text-3xl font-semibold text-[#1f1c1f] mb-6">
+          Willkommen, {user.email}
+        </h1>
+        <p className="text-[#1f1c1f] text-lg">
+          Hier ist dein Dashboard. Später kommen hier Statistiken, deine Kunden, Verträge und weitere Infos.
+        </p>
       </div>
     </Layout>
   )
