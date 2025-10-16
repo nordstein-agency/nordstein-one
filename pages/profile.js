@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
 
-export default function Dashboard() {
-  const router = useRouter()
+export default function Profile() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/')
-      else setUser(data.session.user)
-    })
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user))
   }, [])
 
   if (!user) return <div>Lädt...</div>
@@ -20,7 +15,9 @@ export default function Dashboard() {
     <>
       <Navbar />
       <div className="p-4">
-        <h1 className="text-2xl font-bold">Willkommen, {user.email}</h1>
+        <h1 className="text-xl font-bold mb-4">Profil</h1>
+        <p>Name: {user.user_metadata?.full_name || '-'}</p>
+        <p>Email: {user.email}</p>
       </div>
     </>
   )
