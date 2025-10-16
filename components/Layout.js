@@ -11,25 +11,16 @@ export default function Layout({ children }) {
 
   return (
     <div className="relative min-h-screen w-full">
-      {/* Fixed Farbverlauf-Hintergrund */}
+      {/* Fixed Gradient Hintergrund */}
       <div
-        className="fixed top-0 left-0 w-full h-screen z-0"
+        className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, #451a3d, #ffffff)',
-        }}
-      ></div>
-
-      {/* Weißer Overlay, der mit Scroll sichtbar wird */}
-      <div
-        className="absolute top-0 left-0 w-full h-full z-10"
-        style={{
-          backgroundColor: scrollY > 0 ? '#ffffff' : 'transparent',
-          transition: 'background-color 0.5s ease',
+          background: 'linear-gradient(to bottom, #451a3d 0%, #ffffff 400px, #ffffff 100%)',
         }}
       ></div>
 
       {/* Page Content */}
-      <div className="relative z-20">
+      <div className="relative z-10">
         {children}
       </div>
     </div>
