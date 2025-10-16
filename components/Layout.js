@@ -1,6 +1,11 @@
 export default function Layout({ children }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#451a3d] via-[#451a3d] to-white">
+    <div
+      className="min-h-screen w-full"
+      style={{
+        background: 'linear-gradient(to bottom, #451a3d, #ffffff 150px)',
+      }}
+    >
       {children}
     </div>
   )

@@ -1,39 +1,18 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
 import Navbar from '../components/Navbar'
-import Link from 'next/link'
-
+import Layout from '../components/Layout'
 
 export default function Career() {
-  const [team, setTeam] = useState([])
-
-  useEffect(() => {
-    const fetchTeam = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('manager_id', session.user.id)
-
-      setTeam(data || [])
-    }
-
-    fetchTeam()
-  }, [])
-
   return (
-    <>
+    <Layout>
       <Navbar />
-      <div className="p-4">
-        <h1 className="text-xl font-bold mb-4">Karrierebaum</h1>
-        {team.map(m => (
-          <div key={m.id} className="border p-2 rounded mb-2">
-            <p>{m.full_name} – {m.position}</p>
-          </div>
-        ))}
+      <div className="p-8 text-center">
+        <h1 className="text-2xl font-inter-tight font-semibold text-white">
+          Karriere Seite
+        </h1>
+        <p className="mt-4 text-[#e6ded3]">
+          Hier werden später deine Mitarbeiter in einem Tree angezeigt.
+        </p>
       </div>
-    </>
+    </Layout>
   )
 }
