@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import Navbar from '../components/Navbar'
+import Link from 'next/link'
+
 
 export default function Career() {
   const [team, setTeam] = useState([])
