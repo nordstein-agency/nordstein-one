@@ -1,20 +1,17 @@
-import Navbar from './Navbar';
+// components/Layout.js
+import Navbar from './Navbar'
 
 export default function Layout({ children }) {
   return (
     <div className="relative min-h-screen bg-white">
       {/* Gradient oben */}
-      <div
-        className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-[#451a3d] to-white pointer-events-none"
-      />
+      <div className="absolute top-0 left-0 w-full h-[400px] pointer-events-none z-0"
+           style={{ background: 'linear-gradient(to bottom, #451a3d, #ffffff)' }} />
       
-      {/* Navbar */}
-      <Navbar />
-
-      {/* Page Content */}
-      <main className="relative z-10">
-        {children}
-      </main>
+      <div className="relative z-10">
+        <Navbar />
+        <main>{children}</main>
+      </div>
     </div>
-  );
+  )
 }
