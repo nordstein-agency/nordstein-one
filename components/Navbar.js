@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 export default function Navbar() {
   const router = useRouter()
@@ -16,21 +16,21 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/' // zurück zur Login-Seite
+    router.push('/') // zurück zur Login-Seite
   }
 
-  if (!user) return <div>Lädt...</div>
+  if (!user) return null // Navbar erst anzeigen, wenn User geladen
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+    <nav className="fixed top-0 left-0 w-full bg-white shadow z-50">
       <div className="max-w-screen-xl mx-auto px-4 py-4 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="text-2xl font-bold text-nordsteinPurple">
           Nordstein
         </Link>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex space-x-8">
+        {/* Links zentriert */}
+        <div className="flex space-x-8 justify-center flex-1">
           <Link href="/dashboard" className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark">
             Dashboard
           </Link>
@@ -48,10 +48,10 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Logout Button */}
+        {/* Logout Button rechts */}
         <button
           onClick={handleLogout}
-          className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark md:hidden"
+          className="text-lg text-red-500 hover:text-red-600"
         >
           Abmelden
         </button>
