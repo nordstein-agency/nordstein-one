@@ -19,39 +19,33 @@ export default function Navbar() {
     router.push('/') // zurück zur Login-Seite
   }
 
-  if (!user) return null // Navbar erst anzeigen, wenn User geladen
+  if (!user) return null
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white shadow z-50">
-      <div className="max-w-screen-xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div className="max-w-screen-xl mx-auto px-6 py-4 flex justify-between items-center">
         {/* Logo */}
-        <Link href="/" className="text-2xl font-bold text-nordsteinPurple">
+        <Link href="/" className="text-3xl font-bold text-[#451a3d]">
           Nordstein
         </Link>
 
-        {/* Links zentriert */}
-        <div className="flex space-x-8 justify-center flex-1">
-          <Link href="/dashboard" className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark">
-            Dashboard
-          </Link>
-          <Link href="/customers" className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark">
-            Kunden
-          </Link>
-          <Link href="/contracts" className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark">
-            Verträge
-          </Link>
-          <Link href="/profile" className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark">
-            Profil
-          </Link>
-          <Link href="/career" className="text-lg text-nordsteinPurple hover:text-nordsteinPurpleDark">
-            Karriere
-          </Link>
+        {/* Links als Buttons */}
+        <div className="flex space-x-4 justify-center flex-1">
+          {['Dashboard','Kunden','Verträge','Profil','Karriere'].map((text, i) => (
+            <Link
+              key={i}
+              href={`/${text.toLowerCase()}`}
+              className="px-4 py-2 rounded-lg bg-[#451a3d] text-white font-semibold text-lg hover:bg-[#3a1535] transition-colors"
+            >
+              {text}
+            </Link>
+          ))}
         </div>
 
-        {/* Logout Button rechts */}
+        {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="text-lg text-red-500 hover:text-red-600"
+          className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold text-lg hover:bg-red-600 transition-colors"
         >
           Abmelden
         </button>
