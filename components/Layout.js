@@ -1,37 +1,23 @@
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
+// components/Layout.js
 import Navbar from './Navbar'
-import { supabase } from '../lib/supabaseClient'
 
 export default function Layout({ children }) {
-  const router = useRouter()
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      if (!data.session) {
-        router.push('/') // nicht eingeloggt → Login
-      } else {
-        setUser(data.session.user)
-      }
-    }
-    getSession()
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.push('/')
-      else setUser(session.user)
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [])
-
-  if (!user) return <div className="p-4 text-center">Lädt...</div>
-
   return (
-    <>
-      <Navbar />
-      <main className="p-6">{children}</main>
-    </>
+    <div className="min-h-screen bg-white relative">
+      {/* Farbverlauf nur oben */}
+      <div
+        className="absolute top-0 left-0 w-full h-64 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to bottom, #451a3d, transparent)',
+          zIndex: 0,
+        }}
+      />
+
+      {/* Content über Farbverlauf */}
+      <div className="relative z-10">
+        <Navbar />
+        <main className="max-w-6xl mx-auto p-8">{children}</main>
+      </div>
+    </div>
   )
 }
