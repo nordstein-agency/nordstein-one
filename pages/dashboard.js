@@ -14,37 +14,18 @@ export default function Dashboard() {
     })
   }, [])
 
-  if (!user) return <div className="flex justify-center items-center h-screen text-xl">Lädt...</div>
+  if (!user) return <div>Lädt...</div>
 
   return (
-    <div className="bg-[#1f1c1f] min-h-screen text-white font-interTight">
-      <Navbar />
+    <div className="min-h-screen bg-white relative">
+      {/* Farbverlauf oben */}
+      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-[#451a3d] to-white z-0"></div>
 
-      <div className="max-w-6xl mx-auto p-8">
-        <h1 className="text-4xl nordsteinPurple font-matter font-bold mb-6">
-          Willkommen, {user.email}
-        </h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-[#e6ded3] text-[#1f1c1f] rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-2">Kunden</h2>
-            <p>Übersicht über deine Kunden, Einheiten, Einreichungen usw.</p>
-          </div>
-
-          <div className="bg-[#e6ded3] text-[#1f1c1f] rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-2">Verträge</h2>
-            <p>Hier kannst du alle eingereichten Verträge einsehen.</p>
-          </div>
-
-          <div className="bg-[#e6ded3] text-[#1f1c1f] rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-2">Profil</h2>
-            <p>Deine persönlichen Daten und Karriereposition.</p>
-          </div>
-
-          <div className="bg-[#e6ded3] text-[#1f1c1f] rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-2">Karriere</h2>
-            <p>Hier siehst du deine Mitarbeiterstruktur im Tree.</p>
-          </div>
+      {/* Content über dem Verlauf */}
+      <div className="relative z-10">
+        <Navbar />
+        <div className="p-4">
+          <h1 className="text-2xl font-bold">Willkommen, {user.email}</h1>
         </div>
       </div>
     </div>
