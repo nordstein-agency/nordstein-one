@@ -1,12 +1,12 @@
 // components/Layout.js
 export default function Layout({ children }) {
   return (
-    <div className="min-h-screen bg-white relative">
+    <div className="relative min-h-screen bg-white">
       {/* Farbverlauf oben */}
       <div
         className="absolute top-0 left-0 w-full h-64 pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, #451a3d, transparent)',
+          background: 'linear-gradient(to bottom, #451a3d, #ffffff)', // Lila → Weiß
           zIndex: 0,
         }}
       />
