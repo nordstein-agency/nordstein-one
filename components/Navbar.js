@@ -1,48 +1,36 @@
 // components/Navbar.js
+import { supabase } from '../lib/supabaseClient'
+import Link from 'next/link'
+
 export default function Navbar() {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
   return (
-    <nav className="bg-transparent py-4 px-8 flex justify-center space-x-6">
-      <a
-        href="/dashboard"
-        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
-      >
+    <nav className="flex justify-center items-center gap-6 py-6">
+      <Link href="/dashboard" className="text-[#e6ded3] text-lg font-medium hover:opacity-80 transition">
         Dashboard
-      </a>
-      <a
-        href="/customers"
-        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
-      >
+      </Link>
+      <Link href="/customers" className="text-[#e6ded3] text-lg font-medium hover:opacity-80 transition">
         Kunden
-      </a>
-      <a
-        href="/contracts"
-        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
-      >
+      </Link>
+      <Link href="/contracts" className="text-[#e6ded3] text-lg font-medium hover:opacity-80 transition">
         Verträge
-      </a>
-      <a
-        href="/profile"
-        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
-      >
+      </Link>
+      <Link href="/profile" className="text-[#e6ded3] text-lg font-medium hover:opacity-80 transition">
         Profil
-      </a>
-      <a
-        href="/career"
-        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
-      >
+      </Link>
+      <Link href="/career" className="text-[#e6ded3] text-lg font-medium hover:opacity-80 transition">
         Karriere
-      </a>
+      </Link>
       <button
-        onClick={logout}
-        className="text-white text-lg font-inter tracking-tight hover:text-[#451a3d] transition-colors duration-200"
+        onClick={handleLogout}
+        className="text-red-500 text-lg font-medium ml-6 hover:opacity-80 transition"
       >
         Abmelden
       </button>
     </nav>
   )
-}
-
-async function logout() {
-  await supabase.auth.signOut()
-  window.location.href = '/'
 }

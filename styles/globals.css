@@ -1,5 +1,5 @@
 /* styles/globals.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 * {
   margin: 0;
@@ -8,10 +8,9 @@
 }
 
 body {
-  font-family: 'Inter Tight', sans-serif; /* Inter Tight für die gesamte Seite */
-  /* Hintergrund auf transparent, Farbverlauf kommt über Layout.js */
-  background-color: transparent; 
-  color: #333;
+  font-family: 'Inter', sans-serif;
+  color: #ffffff; /* Textfarbe auf weiß setzen */
+  background: transparent; /* WICHTIG: transparent, damit Layout-Farbverlauf sichtbar ist */
 }
 
 a {
@@ -23,4 +22,5 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  font-family: 'Inter', sans-serif;
 }
