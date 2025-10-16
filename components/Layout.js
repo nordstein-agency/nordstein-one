@@ -3,16 +3,15 @@ import Navbar from './Navbar'
 
 export default function Layout({ children }) {
   return (
-    <div className="relative min-h-screen">
-      {/* Gradient oben */}
-      <div
-        className="absolute top-0 left-0 w-full h-[400px] z-0 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, #451a3d, #ffffff)' }}
-      />
+    <div className="min-h-screen bg-white relative">
+      {/* Header-Gradient */}
+      <div className="bg-gradient-to-b from-[#451a3d] to-white h-[400px] w-full absolute top-0 left-0 z-0" />
 
       <div className="relative z-10">
         <Navbar />
-        <main>{children}</main>
+        <main className="pt-6">
+          {children}
+        </main>
       </div>
     </div>
   )
