@@ -17,16 +17,10 @@ export default function Dashboard() {
   if (!user) return <div>Lädt...</div>
 
   return (
-    <div className="min-h-screen bg-white relative">
-      {/* Farbverlauf oben */}
-      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-[#451a3d] to-white z-0"></div>
-
-      {/* Content über dem Verlauf */}
-      <div className="relative z-10">
-        <Navbar />
-        <div className="p-4">
-          <h1 className="text-2xl font-bold">Willkommen, {user.email}</h1>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-[#451a3d] to-white">
+      <Navbar />
+      <div className="p-4">
+        <h1 className="text-2xl font-bold text-white md:text-black">Willkommen, {user.email}</h1>
       </div>
     </div>
   )
