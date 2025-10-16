@@ -9,11 +9,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        router.push('/')
-      } else {
-        setUser(data.session.user)
-      }
+      if (!data.session) router.push('/')
+      else setUser(data.session.user)
     })
   }, [])
 
@@ -22,7 +19,7 @@ export default function Dashboard() {
   return (
     <>
       <Navbar />
-      <main className="p-8 min-h-screen">
+      <main className="p-8 min-h-screen bg-white">
         <h1 className="text-3xl font-bold text-black">Willkommen, {user.email}</h1>
         <p className="mt-4 text-lg text-black">
           Dein Dashboard ist jetzt bereit.
