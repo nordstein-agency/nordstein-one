@@ -8,9 +8,10 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #ffffff;
+  background: transparent; /* vorher: #fff */
   color: #333;
 }
+
 
 a {
   text-decoration: none;
