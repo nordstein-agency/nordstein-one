@@ -1,7 +1,17 @@
-// components/Navbar.js
-import { signOut } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function Navbar() {
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Logout error:", error);
+    else window.location.href = "/login"; // Zielseite nach Logout
+  };
+
   return (
     <nav className="relative z-20 flex justify-center items-center h-16 bg-transparent">
       <ul className="flex space-x-6 font-inter-tight text-white text-base">
@@ -10,7 +20,7 @@ export default function Navbar() {
         <li><button className="hover:opacity-80">Karriere</button></li>
       </ul>
       <button
-        onClick={() => signOut()}
+        onClick={handleLogout}
         className="absolute right-6 text-white font-inter-tight hover:opacity-80"
       >
         Logout

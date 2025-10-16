@@ -1,8 +1,19 @@
 import Layout from '../components/Layout';
-import { useUser } from '@supabase/auth-helpers-react';
+import { createClient } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function Dashboard() {
-  const { user } = useUser();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const sessionUser = supabase.auth.user();
+    setUser(sessionUser);
+  }, []);
 
   return (
     <Layout>
