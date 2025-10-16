@@ -1,27 +1,21 @@
-import { useEffect, useState } from 'react'
+// components/Layout.js
+import Navbar from './Navbar'
 
 export default function Layout({ children }) {
-  const [scrollY, setScrollY] = useState(0)
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   return (
-    <div className="relative min-h-screen w-full">
-      {/* Fixed Gradient Hintergrund */}
+    <div className="relative min-h-screen">
+      {/* Farbverlauf-Hintergrund */}
       <div
-        className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none"
+        className="fixed top-0 left-0 w-full h-screen z-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, #451a3d 0%, #ffffff 400px, #ffffff 100%)',
+          background: 'linear-gradient(to bottom, #451a3d 0%, #ffffff 50vh)',
         }}
       ></div>
 
-      {/* Page Content */}
+      {/* Navbar + Content */}
       <div className="relative z-10">
-        {children}
+        <Navbar />
+        <main>{children}</main>
       </div>
     </div>
   )
