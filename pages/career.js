@@ -4,7 +4,6 @@ import Layout from '../components/Layout'
 export default function Career() {
   return (
     <Layout>
-     <Navbar/>
       <div className="p-8 text-center">
         <h1 className="text-2xl font-inter-tight font-semibold text-white">
           Karriere Seite
