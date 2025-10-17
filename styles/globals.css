@@ -17,7 +17,7 @@ body {
 
 /* Navbar-Link Style */
 .nav-link {
-  @apply text-white text-[16px];
+  @apply text-white text-[16px] uppercase no-underline;
   font-family: 'Inter Tight', sans-serif;
 }
 
