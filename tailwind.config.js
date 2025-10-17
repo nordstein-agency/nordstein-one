@@ -7,7 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
-      
+      fontFamily: {
+      inter: ['"Inter Tight"', 'sans-serif'], // Tailwind-Klasse: font-inter
+    },
     },
   },
   plugins: [],
