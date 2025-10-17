@@ -15,10 +15,10 @@ export default function Navbar() {
         
 
 
-        <Link href="/customers" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Kunden</Link>
-        <Link href="/contracts" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Verträge</Link>
-        <Link href="/profile" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Profil</Link>
-        <Link href="/career" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Karriere</Link>
+        <Link href="/customers" className="nav-link">Kunden</Link>
+        <Link href="/contracts" className="nav-link">Verträge</Link>
+        <Link href="/profile" className="nav-link">Profil</Link>
+        <Link href="/career" className="nav-link">Karriere</Link>
         <button onClick={handleLogout} className="text-white font-inter text-[16px] ml-6 hover:text-[#e6ded3]">Abmelden</button>
       </nav>
     </header>
