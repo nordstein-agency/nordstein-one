@@ -1,1 +1,11 @@
-{}
+{
+  "/_error": "pages/_error.js",
+  "/_app": "pages/_app.js",
+  "/_document": "pages/_document.js",
+  "/dashboard": "pages/dashboard.js",
+  "/career": "pages/career.js",
+  "/profile": "pages/profile.js",
+  "/contracts": "pages/contracts.js",
+  "/customers": "pages/customers.js",
+  "/": "pages/index.js"
+}
