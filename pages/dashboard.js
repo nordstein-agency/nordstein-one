@@ -18,7 +18,7 @@ export default function Dashboard() {
 
   return (
 
-      <div className="p-8">
+      <div className="nav-link">
         <h1 className="text-3xl font-bold text-black">Willkommen, {user.email}</h1>
         <p className="mt-4 text-lg text-black">
           Dein Dashboard ist jetzt bereit.
