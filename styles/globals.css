@@ -10,3 +10,12 @@ body {
   font-family: 'Inter Tight', sans-serif;
   background-color: #ffffff; /* Weißer Content-Hintergrund */
 }
+
+/* Navbar-Link Style */
+.nav-link {
+  @apply text-white font-inter text-[16px] 
+         hover:text-[#e6ded3] 
+         focus:outline-none focus:text-[#e6ded3] 
+         active:text-[#e6ded3] 
+         visited:text-[#f2ebeb] ;
+}

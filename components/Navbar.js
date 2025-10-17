@@ -10,7 +10,11 @@ export default function Navbar() {
   return (
     <header className="relative w-full">
       <nav className="max-w-6xl mx-auto flex items-center justify-center gap-6 py-6">
-        <Link href="/dashboard" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Dashboard</Link>
+
+        <Link href="/dashboard" className="nav-link">Dashboard</Link>
+        
+
+
         <Link href="/customers" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Kunden</Link>
         <Link href="/contracts" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Verträge</Link>
         <Link href="/profile" className="text-white font-inter text-[16px] hover:text-[#e6ded3]">Profil</Link>
