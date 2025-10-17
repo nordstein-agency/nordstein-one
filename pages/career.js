@@ -3,8 +3,8 @@ import Layout from '../components/Layout'
 
 export default function Career() {
   return (
-    <Layout>
-      <Navbar />
+    
+      
       <div className="p-8 text-center">
         <h1 className="text-2xl font-inter-tight font-semibold text-white">
           Karriere Seite
@@ -13,6 +13,6 @@ export default function Career() {
           Hier werden später deine Mitarbeiter in einem Tree angezeigt.
         </p>
       </div>
-    </Layout>
+    
   )
 }
