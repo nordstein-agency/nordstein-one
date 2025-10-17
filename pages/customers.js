@@ -23,7 +23,7 @@ export default function Customers() {
 
   return (
     <>
-      <Navbar />
+
       <div className="p-4">
         <h1 className="text-xl font-bold mb-4">Kunden</h1>
         {customers.map(c => (

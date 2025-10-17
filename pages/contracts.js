@@ -23,7 +23,7 @@ export default function Contracts() {
 
   return (
     <>
-      <Navbar />
+
       <div className="p-4">
         <h1 className="text-xl font-bold mb-4">Verträge</h1>
         {contracts.map(c => (
