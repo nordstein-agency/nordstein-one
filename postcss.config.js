@@ -1,7 +1,7 @@
-// richtig für Next.js 14+ / Tailwind 4.x
+/** @type {import('postcss').ProcessOptions} */
 module.exports = {
   plugins: {
-    tailwindcss: {},
+    '@tailwindcss/postcss': {},
     autoprefixer: {},
   },
 };
