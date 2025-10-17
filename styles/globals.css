@@ -11,11 +11,26 @@ body {
   background-color: #ffffff; /* Weißer Content-Hintergrund */
 }
 
+
+
 /* Navbar-Link Style */
 .nav-link {
-  @apply text-white font-inter text-[16px] 
-         hover:text-[#e6ded3] 
-         focus:outline-none focus:text-[#e6ded3] 
-         active:text-[#e6ded3] 
-         visited:text-[#f2ebeb] ;
+  @apply text-white font-inter text-[16px];
+}
+
+.nav-link:hover {
+  @apply text-[#e6ded3];
+}
+
+.nav-link:focus {
+  @apply outline-none text-[#e6ded3];
+}
+
+.nav-link:active {
+  @apply text-[#e6ded3];
+}
+
+/* visited kann man nur mit normalem CSS machen */
+.nav-link:visited {
+  color: #f2ebeb;
 }
