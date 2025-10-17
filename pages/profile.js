@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
 
 export default function Profile() {
   const [user, setUser] = useState(null)
