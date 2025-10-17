@@ -6,7 +6,11 @@ module.exports = {
     "./styles/**/*.{css}"  // <- hier Styles einfügen!
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        inter: ['"Inter Tight"', 'sans-serif'],  // <-- hier Font eintragen
+      },
+    },
   },
   plugins: [],
 }
