@@ -488,6 +488,8 @@ export default function Profile() {
 */
 
 
+
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import Layout from '../components/Layout'
@@ -499,14 +501,12 @@ export default function Profile() {
   const [partners, setPartners] = useState([]) // Vertriebspartner
   const [loading, setLoading] = useState(true)
 
-  // Funktion zum Laden der persönlichen Daten eines Users (rekursiv)
   const loadUserData = async (authUser) => {
     if (!authUser) return
 
     setLoading(true)
     setSelectedUser(authUser)
 
-    // Custom User aus "users" Tabelle abrufen
     const { data: customData, error } = await supabase
       .from('users')
       .select('*')
@@ -515,7 +515,6 @@ export default function Profile() {
     if (error) console.error(error)
     else setCustomUser(customData)
 
-    // Name der Führungskraft laden
     if (customData?.leader) {
       const { data: leaderData, error: leaderError } = await supabase
         .from('users')
@@ -528,13 +527,11 @@ export default function Profile() {
       setLeaderName('-')
     }
 
-    // Vertriebspartner laden
     const allPartners = await fetchPartnersRecursive(customData.id)
     setPartners(allPartners)
     setLoading(false)
   }
 
-  // 1️⃣ Angemeldeten User abrufen beim ersten Laden
   useEffect(() => {
     const fetchAuthUser = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -548,7 +545,6 @@ export default function Profile() {
     fetchAuthUser()
   }, [])
 
-  // 2️⃣ Rekursive Funktion, um alle Partner (direkt + indirekt) zu laden
   const fetchPartnersRecursive = async (userId) => {
     let allPartners = []
 
@@ -579,11 +575,9 @@ export default function Profile() {
 
   return (
     <div className="p-4">
-      {/* Persönliche Daten */}
       <h1 className="nav-link mb-4" style={{ color: '#451a3d' }}>Profil</h1>
 
       <div className="grid grid-cols-3 gap-8 mb-6">
-        {/* Spalte 1 */}
         <div>
           <p style={{ color: '#451a3d' }}><strong>Name:</strong> {customUser.first_name} {customUser.last_name}</p>
           <p style={{ color: '#451a3d' }}><strong>Position:</strong> {customUser.role || '-'}</p>
@@ -592,7 +586,6 @@ export default function Profile() {
           <p style={{ color: '#451a3d' }}><strong>Adresse:</strong> {customUser.adress || '-'}</p>
         </div>
 
-        {/* Spalte 2 */}
         <div>
           <p style={{ color: '#451a3d' }}><strong>Büroadresse:</strong> {customUser.office_adress || '-'}</p>
           <p style={{ color: '#451a3d' }}><strong>E-Mail privat:</strong> {customUser.email || '-'}</p>
@@ -601,7 +594,6 @@ export default function Profile() {
           <p style={{ color: '#451a3d' }}><strong>Geburtsdatum:</strong> {customUser.birth_date || '-'}</p>
         </div>
 
-        {/* Spalte 3 */}
         <div>
           <p style={{ color: '#451a3d' }}><strong>Bank:</strong> {customUser.bank_name || '-'}</p>
           <p style={{ color: '#451a3d' }}><strong>IBAN:</strong> {customUser.iban || '-'}</p>
@@ -610,7 +602,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Vertriebspartner-Tabelle */}
       <h2 className="text-xl font-bold mb-4" style={{ color: '#451a3d' }}>Vertriebspartner</h2>
       {partners.length === 0 ? (
         <p>Keine Vertriebspartner gefunden.</p>
@@ -629,7 +620,7 @@ export default function Profile() {
                 key={p.id}
                 className="border-t hover:bg-gray-50 cursor-pointer"
                 onClick={async () => {
-                  // Partner anklicken -> dessen Daten laden
+
                   const { data: partnerAuth } = await supabase
                     .from('users')
                     .select('*')
@@ -651,3 +642,11 @@ export default function Profile() {
     </div>
   )
 }
+
+
+
+
+
+
+
+

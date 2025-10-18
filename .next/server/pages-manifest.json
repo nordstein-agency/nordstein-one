@@ -2,9 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/customers": "pages/customers.js",
-  "/profile": "pages/profile.js",
-  "/contracts": "pages/contracts.js",
   "/dashboard": "pages/dashboard.js",
-  "/career": "pages/career.js"
+  "/customers": "pages/customers.js",
+  "/profile": "pages/profile.js"
 }
