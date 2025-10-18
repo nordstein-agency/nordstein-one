@@ -68,7 +68,9 @@ export default function Contracts() {
   const pageSize = 10
   const [totalPages, setTotalPages] = useState(1)
 
+  // ---------------------------
   // Upload Modal
+  // ---------------------------
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [isNewCustomer, setIsNewCustomer] = useState(true)
   const [customerName, setCustomerName] = useState('')
@@ -78,6 +80,15 @@ export default function Contracts() {
   const [pdfFile, setPdfFile] = useState(null)
 
   // ---------------------------
+  // Submit Modal
+  // ---------------------------
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
+  const [units, setUnits] = useState('')
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [euroStage, setEuroStage] = useState('-')
+  const [note, setNote] = useState('')
+
+  // ---------------------------
   // Fetch Team
   // ---------------------------
   const fetchTeamForDropdown = async (currentUserId) => {
@@ -85,7 +96,7 @@ export default function Contracts() {
 
     const fetchLevel = async (ids) => {
       if (!ids || ids.length === 0) return
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('users')
         .select('id, first_name, last_name, role')
         .in('leader', ids)
@@ -201,7 +212,7 @@ export default function Contracts() {
   useEffect(() => applyClientFilters(), [contracts, search, statusFilter, customUserFilter, currentPage])
 
   // ---------------------------
-  // Upload Modal
+  // Upload Modal Logic
   // ---------------------------
   const openUploadModal = () => {
     setShowUploadModal(true)
@@ -259,8 +270,68 @@ export default function Contracts() {
   }
 
   // ---------------------------
-  // Detailansicht
+  // Submit Modal Logic
   // ---------------------------
+  const openSubmitModal = () => {
+  if (!selectedContract) return
+  setUnits(selectedContract.eh || '')
+  const user = team.find(u => u.id === selectedContract.user_id)
+  setSelectedUser(user)
+  setEuroStage(user ? euroStageMap[user.role] || '-' : '-') // <- HIER
+  setNote(selectedContract.note || '')
+  setShowSubmitModal(true)
+}
+
+
+  const handleSaveSubmitData = async () => {
+    if (!selectedContract || !selectedUser) {
+      alert('Bitte alle Pflichtfelder ausfüllen.')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('contracts')
+        .update({
+          eh: units,
+          user_id: selectedUser.id
+        })
+        .eq('id', selectedContract.id)
+      if (error) throw error
+
+      await supabase.from('customers').update({ user_id: selectedUser.id }).eq('id', selectedContract.customer_id)
+
+      setContracts(prev =>
+        prev.map(c => c.id === selectedContract.id ? { ...c, eh: units, user_id: selectedUser.id } : c)
+      )
+      setShowSubmitModal(false)
+      alert('Daten erfolgreich gespeichert!')
+    } catch (err) {
+      console.error(err)
+      alert('Fehler beim Speichern: ' + err.message)
+    }
+  }
+
+  const handleSendEmail = async () => {
+    try {
+      await fetch('/api/sendEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractId: selectedContract.id,
+          units,
+          userId: selectedUser.id,
+          note
+        })
+      })
+      setShowSubmitModal(false)
+      alert('E-Mail erfolgreich versendet!')
+    } catch (err) {
+      console.error(err)
+      alert('Fehler beim Versenden der E-Mail')
+    }
+  }
+
   const selectContract = (c) => setSelectedContract(c)
 
   const renderPagination = () => {
@@ -285,11 +356,11 @@ export default function Contracts() {
 
       <div className="mb-4">
         <button
-    onClick={openUploadModal}
-    className="px-4 py-2 border rounded hover:bg-gray-100"
-  >
-    Antrag hochladen
-  </button>
+          onClick={openUploadModal}
+          className="px-4 py-2 border rounded hover:bg-gray-100"
+        >
+          Antrag hochladen
+        </button>
       </div>
 
       <div className="flex gap-4 mb-4 items-center">
@@ -300,66 +371,47 @@ export default function Contracts() {
           onChange={(e) => setSearch(e.target.value)}
           className="border rounded px-4 py-2 w-1/3 text-[#451a3d] placeholder-[#aaa]"
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border rounded px-4 py-2 text-[#451a3d]"
-        >
-          <option value="">Alle Status</option>
-          <option value="eingereicht">Eingereicht</option>
-          <option value="antrag">Antrag</option>
-          <option value="bezahlt">Bezahlt</option>
-        </select>
-        <select
-          value={customUserFilter}
-          onChange={(e) => setCustomUserFilter(e.target.value)}
-          className="border rounded px-4 py-2 text-[#451a3d]"
-        >
-          <option value="">Alle Betreuer</option>
-          {team.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
-        </select>
       </div>
 
       {loading ? <div>Lädt...</div> : (
         <>
           <table className="w-full border-collapse bg-white rounded shadow">
-  <thead>
-    <tr className="bg-gray-100">
-      <th className="text-left p-3">Kunde</th>
-      <th className="text-left p-3">Tarif</th>
-      <th className="text-left p-3">Status</th>
-      <th className="text-left p-3">Einheiten</th>
-      <th className="text-left p-3">Betreuer</th>
-    </tr>
-  </thead>
-  <tbody>
-    {filtered.map(c => {
-      const leader = team.find(u => u.id === c.user_id)
-      return (
-        <tr key={c.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => selectContract(c)}>
-          <td className="p-3">{c.customer?.name || '-'}</td>
-          <td className="p-3">{c.tarif}</td>
-          <td className="p-3">{c.state}</td>
-          <td className="p-3">{c.eh || '-'}</td>
-          <td className="p-3">{leader ? `${leader.first_name} ${leader.last_name}` : '-'}</td>
-        </tr>
-      )
-    })}
-  </tbody>
-</table>
-
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="text-left p-3">Kunde</th>
+                <th className="text-left p-3">Tarif</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-left p-3">Einheiten</th>
+                <th className="text-left p-3">Betreuer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(c => {
+                const leader = team.find(u => u.id === c.user_id)
+                return (
+                  <tr key={c.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => selectContract(c)}>
+                    <td className="p-3">{c.customer?.name || '-'}</td>
+                    <td className="p-3">{c.tarif}</td>
+                    <td className="p-3">{c.state}</td>
+                    <td className="p-3">{c.eh || '-'}</td>
+                    <td className="p-3">{leader ? `${leader.first_name} ${leader.last_name}` : '-'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
           <div className="flex gap-2 mt-4">{renderPagination()}</div>
         </>
       )}
 
-      {/* ------------------- Detailansicht ------------------- */}
+      {/* Detailansicht */}
       {selectedContract && (
         <div className="bg-white rounded shadow mt-8 p-6 relative">
           <h1 className="text-xl font-bold mb-4 text-[#451a3d]">VERTRAG</h1>
 
           <div className="absolute top-4 right-4 flex gap-2">
             <button onClick={() => setSelectedContract(null)} className="border px-3 py-1 rounded">Schließen</button>
-            <button onClick={openUploadModal} className="border px-3 py-1 rounded">Einreichen</button>
+            <button onClick={openSubmitModal} className="border px-3 py-1 rounded">Einreichen</button>
             <button
               onClick={() => handleDownload(selectedContract.pdf_url, selectedContract.customer?.name || 'vertrag')}
               className="border px-3 py-1 rounded"
@@ -370,48 +422,34 @@ export default function Contracts() {
 
           <div className="grid grid-cols-3 gap-8 mb-6">
             <div>
-              <p style={{ color: '#451a3d' }}><strong>Kunde:</strong> {selectedContract.customer?.name || '-'}</p>
-              <p style={{ color: '#451a3d' }}><strong>Tarif:</strong> {selectedContract.tarif}</p>
-              <p style={{ color: '#451a3d' }}><strong>Status:</strong> {selectedContract.state}</p>
-              <p style={{ color: '#451a3d' }}><strong>Einheiten:</strong> {selectedContract.eh || '-'}</p>
-              <p style={{ color: '#451a3d' }}><strong>Betreuer:</strong> {team.find(u => u.id === selectedContract.user_id) ? `${team.find(u => u.id === selectedContract.user_id).first_name} ${team.find(u => u.id === selectedContract.user_id).last_name}` : '-'}</p>
+              <p><strong>Kunde:</strong> {selectedContract.customer?.name || '-'}</p>
+              <p><strong>Tarif:</strong> {selectedContract.tarif}</p>
+              <p><strong>Status:</strong> {selectedContract.state}</p>
+              <p><strong>Einheiten:</strong> {selectedContract.eh || '-'}</p>
+              <p><strong>Betreuer:</strong> {team.find(u => u.id === selectedContract.user_id) ? `${team.find(u => u.id === selectedContract.user_id).first_name} ${team.find(u => u.id === selectedContract.user_id).last_name}` : '-'}</p>
             </div>
             <div>
-              <p style={{ color: '#451a3d' }}><strong>Eingereicht am:</strong> {selectedContract.sent_at ? new Date(selectedContract.sent_at).toLocaleDateString() : '-'}</p>
-              <p style={{ color: '#451a3d' }}><strong>Provision:</strong> {selectedContract.provision || '-'}</p>
+              <p><strong>Notiz:</strong> {selectedContract.note || '-'}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* ------------------- Upload Modal ------------------- */}
+      {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded shadow p-6 w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-4 text-[#451a3d]">Antrag hochladen</h2>
+            <h2 className="text-xl font-bold mb-4">Antrag hochladen</h2>
             <div className="mb-4">
-              <label className="block text-[#451a3d] font-semibold mb-1">Kunde *</label>
+              <label>Kunde *</label>
               <div className="flex gap-2">
-                <label>
-                  <input type="radio" checked={isNewCustomer} onChange={() => setIsNewCustomer(true)} /> Neukunde
-                </label>
-                <label>
-                  <input type="radio" checked={!isNewCustomer} onChange={() => setIsNewCustomer(false)} /> Bestehender Kunde
-                </label>
+                <label><input type="radio" checked={isNewCustomer} onChange={() => setIsNewCustomer(true)} /> Neukunde</label>
+                <label><input type="radio" checked={!isNewCustomer} onChange={() => setIsNewCustomer(false)} /> Bestehender Kunde</label>
               </div>
               {isNewCustomer ? (
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="border rounded w-full max-w-[450px] px-3 py-2 text-[#451a3d] mt-2"
-                />
+                <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="border rounded w-full max-w-[450px] px-3 py-2 mt-2" />
               ) : (
-                <select
-                  value={existingCustomerId}
-                  onChange={(e) => setExistingCustomerId(e.target.value)}
-                  className="border rounded w-full max-w-[450px] px-3 py-2 text-[#451a3d] mt-2"
-                >
+                <select value={existingCustomerId} onChange={e => setExistingCustomerId(e.target.value)} className="border rounded w-full max-w-[450px] px-3 py-2 mt-2">
                   <option value="">Bitte auswählen</option>
                   {availableCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -419,31 +457,78 @@ export default function Contracts() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-[#451a3d] font-semibold mb-1">Tarif *</label>
-              <input
-                type="text"
-                value={tarif}
-                onChange={(e) => setTarif(e.target.value)}
-                className="border rounded w-full max-w-[450px] px-3 py-2 text-[#451a3d]"
-              />
+              <label>Tarif *</label>
+              <input type="text" value={tarif} onChange={e => setTarif(e.target.value)} className="border rounded w-full max-w-[450px] px-3 py-2" />
             </div>
 
             <div className="mb-4">
-              <label className="block text-[#451a3d] font-semibold mb-1">PDF hochladen *</label>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setPdfFile(e.target.files[0])}
-              />
+              <label>PDF hochladen *</label>
+              <input type="file" accept="application/pdf" onChange={e => setPdfFile(e.target.files[0])} />
             </div>
 
             <div className="flex justify-end gap-4">
-              <button onClick={() => setShowUploadModal(false)} className="px-4 py-2 border rounded">Abbrechen</button>
-              <button onClick={handleSaveUpload} className="px-4 py-2 bg-purple-600 text-white rounded">Speichern</button>
+              <button onClick={() => setShowUploadModal(false)} className="border px-4 py-2 rounded">Abbrechen</button>
+              <button onClick={handleSaveUpload} className="border px-4 py-2 rounded">Speichern</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Submit Modal */}
+{showSubmitModal && (
+  <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+    <div className="bg-white rounded shadow p-6 w-full max-w-lg">
+      <h2 className="text-xl font-bold mb-4">Vertrag einreichen</h2>
+
+      <div className="mb-4 max-w-[450px]">
+        <label>Einheiten</label>
+        <input type="number" value={units} onChange={e => setUnits(e.target.value)} className="border rounded w-full px-3 py-2 mt-1" />
+      </div>
+
+      <div className="mb-4 max-w-[450px]">
+        <label>Betreuer</label>
+
+
+        <select
+  value={selectedUser?.id || ''}
+  onChange={(e) => {
+    const user = team.find(u => u.id === e.target.value)
+    setSelectedUser(user)
+    setEuroStage(user ? euroStageMap[user.role] || '-' : '-') // <- HIER
+  }}
+  className="border rounded w-full px-3 py-2 mt-1"
+>
+  <option value="">Bitte auswählen</option>
+  {team.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.role})</option>)}
+</select>
+
+
+
+      </div>
+
+      <div className="mb-4 max-w-[450px]">
+        <label>Stufe (€)</label>
+        <input type="text" value={euroStage} readOnly className="border rounded w-full px-3 py-2 mt-1 bg-gray-100" />
+      </div>
+
+      <div className="mb-4 max-w-[450px]">
+        <label>Notiz</label>
+        <textarea value={note} onChange={e => setNote(e.target.value)} className="border rounded w-full px-3 py-2 mt-1" />
+      </div>
+
+      <div className="flex justify-end gap-4">
+        <button onClick={() => setShowSubmitModal(false)} className="border px-4 py-2 rounded">Abbrechen</button>
+        <button onClick={handleSaveSubmitData} className="border px-4 py-2 rounded">Speichern</button>
+        <button onClick={handleSendEmail} className="border px-4 py-2 rounded bg-purple-100 hover:bg-purple-200">Versenden</button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+
+
     </div>
   )
 }
