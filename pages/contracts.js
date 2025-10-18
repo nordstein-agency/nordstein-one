@@ -312,6 +312,9 @@ export default function Contracts() {
     }
   }
 
+
+
+/*
   const handleSendEmail = async () => {
     try {
       await fetch('/api/sendEmail', {
@@ -331,6 +334,33 @@ export default function Contracts() {
       alert('Fehler beim Versenden der E-Mail')
     }
   }
+
+*/
+
+
+const handleSendEmail = async () => {
+  
+  
+  if (!selectedContract) return alert('Kein Vertrag ausgewählt!')
+
+  try {
+    const res = await fetch('/api/sendEmail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contractId: selectedContract.id })
+    })
+    const data = await res.json()
+    if (res.ok) alert(data.message)
+    else alert('Fehler: ' + data.error)
+  } catch (err) {
+    console.error(err)
+    alert('Fehler beim Versenden der E-Mail')
+  }
+}
+
+
+
+
 
   const selectContract = (c) => setSelectedContract(c)
 
