@@ -4,6 +4,55 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import Layout from '../components/Layout'
 
+
+const handleDownload = async (pdfUrl, title = 'vertrag') => {
+  try {
+    if (!pdfUrl) {
+      alert('Kein PDF für diesen Vertrag hinterlegt.')
+      return
+    }
+
+    // Prüfen, ob es sich um eine vollständige URL handelt
+    if (pdfUrl.startsWith('http')) {
+      // Direktes Herunterladen der Datei
+      const response = await fetch(pdfUrl)
+      if (!response.ok) throw new Error('Fehler beim Abrufen der PDF')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `${title}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      return
+    }
+
+    // Wenn kein http-Link, dann ist es ein Pfad im Storage-Bucket
+    const { data, error } = await supabase.storage.from('contracts').download(pdfUrl)
+    if (error) throw error
+
+    const url = window.URL.createObjectURL(data)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `${title}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Fehler beim Herunterladen der PDF:', err)
+    alert('Fehler beim Herunterladen der PDF.')
+  }
+}
+
+
+
+
+
+
 export default function Contracts() {
   const [contracts, setContracts] = useState([])
   const [filtered, setFiltered] = useState([])
@@ -280,18 +329,27 @@ export default function Contracts() {
             >
               Schließen
             </button>
+
+
             <button
               onClick={() => console.log('Einreichen')}
               className="border px-3 py-1 rounded"
             >
               Einreichen
             </button>
+
+
             <button
-              onClick={() => console.log('Download')}
+              onClick={() =>
+              handleDownload(selectedContract.pdf_url, selectedContract.customer?.name || 'vertrag')
+              }
               className="border px-3 py-1 rounded"
             >
               Download
             </button>
+
+
+
           </div>
 
           {/* Details */}
