@@ -314,28 +314,6 @@ export default function Contracts() {
 
 
 
-/*
-  const handleSendEmail = async () => {
-    try {
-      await fetch('/api/sendEmail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contractId: selectedContract.id,
-          units,
-          userId: selectedUser.id,
-          note
-        })
-      })
-      setShowSubmitModal(false)
-      alert('E-Mail erfolgreich versendet!')
-    } catch (err) {
-      console.error(err)
-      alert('Fehler beim Versenden der E-Mail')
-    }
-  }
-
-*/
 
 
 const handleSendEmail = async () => {

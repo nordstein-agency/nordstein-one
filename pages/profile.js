@@ -4,6 +4,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import Layout from '../components/Layout'
+import { useRouter } from 'next/router'
+
 
 export default function Profile() {
   const [selectedUser, setSelectedUser] = useState(null) // aktuell angezeigter User
@@ -11,6 +13,8 @@ export default function Profile() {
   const [leaderName, setLeaderName] = useState('-') // Name der Führungskraft
   const [partners, setPartners] = useState([]) // Vertriebspartner
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
 
   const loadUserData = async (authUser) => {
     if (!authUser) return
@@ -84,74 +88,94 @@ export default function Profile() {
   if (loading) return <div>Lädt...</div>
   if (!customUser) return <div>Benutzerdaten nicht gefunden</div>
 
-  return (
-    <div className="p-4">
-      <h1 className="nav-link mb-4" style={{ color: '#451a3d' }}>Profil</h1>
 
-      <div className="grid grid-cols-3 gap-8 mb-6">
-        <div>
-          <p style={{ color: '#451a3d' }}><strong>Name:</strong> {customUser.first_name} {customUser.last_name}</p>
-          <p style={{ color: '#451a3d' }}><strong>Position:</strong> {customUser.role || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>Vermittlernummer:</strong> {customUser.nordstein_id || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>Führungskraft:</strong> {leaderName}</p>
-          <p style={{ color: '#451a3d' }}><strong>Adresse:</strong> {customUser.adress || '-'}</p>
-        </div>
 
-        <div>
-          <p style={{ color: '#451a3d' }}><strong>Büroadresse:</strong> {customUser.office_adress || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>E-Mail privat:</strong> {customUser.email || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>E-Mail geschäftlich:</strong> {customUser.business_email || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>Telefon:</strong> {customUser.phone || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>Geburtsdatum:</strong> {customUser.birth_date || '-'}</p>
-        </div>
 
-        <div>
-          <p style={{ color: '#451a3d' }}><strong>Bank:</strong> {customUser.bank_name || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>IBAN:</strong> {customUser.iban || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>BIC:</strong> {customUser.bic || '-'}</p>
-          <p style={{ color: '#451a3d' }}><strong>SV-Nr.:</strong> {customUser.sv_nr || '-'}</p>
-        </div>
+return (
+  <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">
+    <h1 className="nav-link mb-4 text-2xl font-bold" style={{ color: '#451a3d' }}>Profil</h1>
+
+    <div className="grid grid-cols-3 gap-8 mb-6">
+      <div>
+        <p><strong>Name:</strong> {customUser.first_name} {customUser.last_name}</p>
+        <p><strong>Position:</strong> {customUser.role || '-'}</p>
+        <p><strong>Vermittlernummer:</strong> {customUser.nordstein_id || '-'}</p>
+        <p><strong>Führungskraft:</strong> {leaderName}</p>
+        <p><strong>Adresse:</strong> {customUser.adress || '-'}</p>
       </div>
 
-      <h2 className="text-xl font-bold mb-4" style={{ color: '#451a3d' }}>Vertriebspartner</h2>
-      {partners.length === 0 ? (
-        <p>Keine Vertriebspartner gefunden.</p>
-      ) : (
-        <table className="w-full border-collapse bg-white rounded shadow">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="text-left p-3" style={{ color: '#451a3d' }}>Name</th>
-              <th className="text-left p-3" style={{ color: '#451a3d' }}>Position</th>
-              <th className="text-left p-3" style={{ color: '#451a3d' }}>Vermittlernummer</th>
-            </tr>
-          </thead>
-          <tbody>
-            {partners.map((p) => (
-              <tr
-                key={p.id}
-                className="border-t hover:bg-gray-50 cursor-pointer"
-                onClick={async () => {
+      <div>
+        <p><strong>Büroadresse:</strong> {customUser.office_adress || '-'}</p>
+        <p><strong>E-Mail privat:</strong> {customUser.email || '-'}</p>
+        <p><strong>E-Mail geschäftlich:</strong> {customUser.business_email || '-'}</p>
+        <p><strong>Telefon:</strong> {customUser.phone || '-'}</p>
+        <p><strong>Geburtsdatum:</strong> {customUser.birth_date || '-'}</p>
+      </div>
 
-                  const { data: partnerAuth } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', p.id)
-                    .single()
-                  if (partnerAuth) {
-                    await loadUserData({ email: partnerAuth.email })
-                  }
-                }}
-              >
-                <td className="p-3">{p.first_name} {p.last_name}</td>
-                <td className="p-3">{p.role || '-'}</td>
-                <td className="p-3">{p.nordstein_id || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div>
+        <p><strong>Bank:</strong> {customUser.bank_name || '-'}</p>
+        <p><strong>IBAN:</strong> {customUser.iban || '-'}</p>
+        <p><strong>BIC:</strong> {customUser.bic || '-'}</p>
+        <p><strong>SV-Nr.:</strong> {customUser.sv_nr || '-'}</p>
+      </div>
     </div>
-  )
+
+
+
+
+<div className="flex justify-between items-center mb-4">
+  <h2 className="text-xl font-bold" style={{ color: '#451a3d' }}>Vertriebspartner</h2>
+
+  <button
+    onClick={() => router.push('/new-employee')}
+    className="bg-[#451a3d] text-white px-4 py-2 rounded-none border-0 outline-none shadow-none hover:bg-[#451a3d] focus:outline-none"
+    style={{ fontFamily: 'Inter Tight, Inter, system-ui, sans-serif' }}
+  >
+    Neuen Vertriebspartner anlegen
+  </button>
+</div>
+
+
+
+
+    {partners.length === 0 ? (
+      <p>Keine Vertriebspartner gefunden.</p>
+    ) : (
+      <table className="w-full border-collapse bg-white rounded shadow">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="text-left p-3">Name</th>
+            <th className="text-left p-3">Position</th>
+            <th className="text-left p-3">Vermittlernummer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {partners.map((p) => (
+            <tr
+              key={p.id}
+              className="border-t hover:bg-gray-50 cursor-pointer"
+              onClick={async () => {
+                const { data: partnerAuth } = await supabase
+                  .from('users')
+                  .select('*')
+                  .eq('id', p.id)
+                  .single()
+                if (partnerAuth) await loadUserData({ email: partnerAuth.email })
+              }}
+            >
+              <td className="p-3">{p.first_name} {p.last_name}</td>
+              <td className="p-3">{p.role || '-'}</td>
+              <td className="p-3">{p.nordstein_id || '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+)
+
+
+
 }
 
 
