@@ -28,36 +28,7 @@ function generateSupabasePassword() {
   return password;
 }
 
-/*
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
-
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Missing email' });
-
-  try {
-    // Supabase automatisch Set-Password-Link senden
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-
-      password: generateSupabasePassword(),
-      //password: tempPassword,
-      email_confirm: false // WICHTIG: verschickt automatisch Link zur Passworterstellung
-    });
-
-
-
-    if (error) throw error;
-
-    res.status(200).json({ userId: data.user.id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-}
-
-*/
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -73,13 +44,38 @@ export default async function handler(req, res) {
     });
     if (error) throw error;
 
+
+    /*
     // 2️⃣ Reset-Link generieren
     const { data: resetData, error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://deine-seite.de/set-password' // wo User das Passwort setzen soll
+      redirectTo: process.env.RESET_REDIRECT_URL // wo User das Passwort setzen soll
     });
+    */
+
+    
+        const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'recovery',      
+    email,
+    options: { redirectTo: process.env.RESET_REDIRECT_URL }
+    });
+
     if (resetError) throw resetError;
 
-    const resetLink = resetData?.action_link; // Link vom Supabase-Call
+   
+
+    //const resetLink = resetData.action_link || resetData.properties?.action_link;
+
+    const resetLink = resetData?.properties?.action_link;
+
+
+    if (!resetLink) throw new Error("Reset-Link konnte nicht erstellt werden");
+    
+    
+
+    //const resetLink = resetData?.action_link; // Link vom Supabase-Call
+
+    
+
 
     // 3️⃣ Eigene Mail versenden
     await transporter.sendMail({
@@ -93,6 +89,10 @@ export default async function handler(req, res) {
         <p>Viele Grüße,<br/>Nordstein Agency</p>
       `
     });
+
+    console.log("resetLink:", resetLink);
+console.log("Email versendet an:", email);
+
 
     res.status(200).json({ userId: userData.user.id });
   } catch (err) {

@@ -125,7 +125,7 @@ const handleSubmit = async () => {
 
     // 3️⃣ Auth-User über API erstellen
 
-    console.log(formData.email)
+    //console.log(formData.email)
     const resAuth = await fetch('/api/create-auth-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,11 +133,11 @@ const handleSubmit = async () => {
     });
 
 
-    console.log('resAuth.status', resAuth.status);
+    //console.log('resAuth.status', resAuth.status);
 
     const authData = await resAuth.json();
 
-    console.log('authData', authData);
+    //console.log('authData', authData);
 
 
     if (!resAuth.ok) throw new Error(authData.error || 'Auth-User Fehler');
