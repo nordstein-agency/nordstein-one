@@ -2,8 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/dashboard": "pages/dashboard.js",
+  "/career": "pages/career.js",
   "/contracts": "pages/contracts.js",
-  "/api/sendEmail": "pages/api/sendEmail.js"
+  "/profile": "pages/profile.js"
 }

@@ -60,6 +60,21 @@ export default async function handler(req, res) {
     // 6️⃣ Mail senden
     await transporter.sendMail(mailOptions)
 
+
+    // --- setze sent_at in der contracts-Tabelle ---
+const now = new Date().toISOString()
+const { error: updateError } = await supabase
+  .from('contracts')
+  .update({ sent_at: now })
+  .eq('id', contractId)
+
+if (updateError) {
+  console.error('Fehler beim Setzen von sent_at:', updateError)
+  throw updateError
+}
+
+
+
     res.status(200).json({ message: 'Email erfolgreich versendet' })
   } catch (err) {
     console.error(err)
