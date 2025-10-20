@@ -101,7 +101,7 @@ return (
         <p><strong>Position:</strong> {customUser.role || '-'}</p>
         <p><strong>Vermittlernummer:</strong> {customUser.nordstein_id || '-'}</p>
         <p><strong>Führungskraft:</strong> {leaderName}</p>
-        <p><strong>Adresse:</strong> {customUser.adress || '-'}</p>
+        <p><strong>Adresse:</strong> {customUser.private_adress || '-'}</p>
       </div>
 
       <div>
