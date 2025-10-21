@@ -2,7 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/dashboard": "pages/dashboard.js",
   "/customers": "pages/customers.js",
-  "/": "pages/index.js"
+  "/create-concept": "pages/create-concept.js",
+  "/projects": "pages/projects.js",
+  "/contracts": "pages/contracts.js"
 }
