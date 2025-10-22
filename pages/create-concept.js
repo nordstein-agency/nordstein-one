@@ -172,7 +172,7 @@ export default function CreateConcept() {
           <button
             onClick={async () => {
               // 🪟 Tab sofort öffnen (Popup-Schutz umgehen)
-              const newTab = window.open('', '_blank')
+              const newTab = window.open('about:blank', '_blank', 'noopener,noreferrer')
               if (newTab) {
                 newTab.document.write(`
                   <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #451a3d;">
@@ -228,6 +228,12 @@ export default function CreateConcept() {
                 const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
                   customer.name
                 )}&folderId=${folderId}&documentName=${encodeURIComponent(firstFile + '.pdf')}`
+
+
+                setTimeout(() => {
+                  if (newTab) newTab.location.href = editorUrl;
+                }, 300);
+
 
                 // 🔗 Tab weiterleiten
                 if (newTab) newTab.location.href = editorUrl
