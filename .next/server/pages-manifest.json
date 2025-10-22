@@ -2,7 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/customers": "pages/customers.js",
   "/create-concept": "pages/create-concept.js",
-  "/pdf-editor": "pages/pdf-editor.js"
+  "/customers": "pages/customers.js",
+  "/api/add-customer-docs": "pages/api/add-customer-docs.js",
+  "/api/update-contract-pdf": "pages/api/update-contract-pdf.js"
 }
