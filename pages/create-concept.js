@@ -13,7 +13,6 @@ export default function CreateConcept() {
 
   // 🔹 Kunde laden
   useEffect(() => {
-
     if (!customerId) return
     const fetchCustomer = async () => {
       const { data, error } = await supabase
@@ -27,51 +26,34 @@ export default function CreateConcept() {
     fetchCustomer()
   }, [customerId])
 
-
-    //Vorlagen laden
+  // 🔹 Vorlagen laden
   useEffect(() => {
-  const fetchTemplates = async () => {
-    console.log("🚀 Lade Vorlagen aus Supabase...")
+    const fetchTemplates = async () => {
+      console.log("🚀 Lade Vorlagen aus Supabase...")
 
-    const { data, error } = await supabase.storage
-      .from('concept_templates')
-      .list('contract_templates', {
-        limit: 100,
-        sortBy: { column: 'name', order: 'asc' },
-      })
+      const { data, error } = await supabase.storage
+        .from('concept_templates')
+        .list('contract_templates', {
+          limit: 100,
+          sortBy: { column: 'name', order: 'asc' },
+        })
 
-    console.log("📦 Templates Response:", data)
-    console.log("❌ Error:", error)
+      if (error) {
+        console.error("Fehler beim Laden der Templates:", error)
+        setTemplates([])
+        setLoading(false)
+        return
+      }
 
-    if (error) {
-      console.error("Fehler beim Laden der Templates:", error)
-      setTemplates([])
+      const cleaned =
+        data?.filter((f) => f.name?.endsWith('.pdf')).map((f) => f.name.replace('.pdf', '')) || []
+
+      setTemplates(cleaned)
       setLoading(false)
-      return
     }
 
-    const cleaned =
-      data?.filter((f) => f.name?.endsWith('.pdf')).map((f) => f.name.replace('.pdf', '')) || []
-
-    console.log("✅ Gefundene PDF-Dateien:", cleaned)
-    setTemplates(cleaned)
-    setLoading(false)
-  }
-
-  fetchTemplates()
-}, [])
-
-
-
-
-
-
-
-
-
-
-
-
+    fetchTemplates()
+  }, [])
 
   // 🔹 Checkbox toggeln
   const toggleDoc = (name) => {
@@ -130,41 +112,37 @@ export default function CreateConcept() {
         </p>
       )}
 
-
-
       {/* Dropdown Konzept wählen */}
-<div className="mb-6 max-w-xs">
-  <label className="block mb-2 font-semibold text-[#451a3d]">
-    Konzept wählen
-  </label>
-  <div className="relative inline-block w-full">
-    <select
-      value={selectedConcept}
-      onChange={(e) => setSelectedConcept(e.target.value)}
-      className="appearance-none w-full bg-[#f9f7f8] text-[#451a3d] font-[Inter Tight] font-medium border border-[#d9c8d5] py-2.5 px-4 rounded-none focus:outline-none focus:ring-2 focus:ring-[#451a3d] focus:border-[#451a3d] hover:bg-[#f2edf1] transition-all"
-    >
-      <option value="Starter">Starter</option>
-      <option value="Essential">Essential</option>
-      <option value="Professional">Professional</option>
-      <option value="Enterprise">Enterprise</option>
-    </select>
+      <div className="mb-6 max-w-xs">
+        <label className="block mb-2 font-semibold text-[#451a3d]">
+          Konzept wählen
+        </label>
+        <div className="relative inline-block w-full">
+          <select
+            value={selectedConcept}
+            onChange={(e) => setSelectedConcept(e.target.value)}
+            className="appearance-none w-full bg-[#f9f7f8] text-[#451a3d] font-[Inter Tight] font-medium border border-[#d9c8d5] py-2.5 px-4 rounded-none focus:outline-none focus:ring-2 focus:ring-[#451a3d] focus:border-[#451a3d] hover:bg-[#f2edf1] transition-all"
+          >
+            <option value="Starter">Starter</option>
+            <option value="Essential">Essential</option>
+            <option value="Professional">Professional</option>
+            <option value="Enterprise">Enterprise</option>
+          </select>
 
-    {/* Custom Pfeil */}
-    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#451a3d]">
-      <svg
-        className="w-4 h-4"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-      </svg>
-    </div>
-  </div>
-</div>
-
-
+          {/* Custom Pfeil */}
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#451a3d]">
+            <svg
+              className="w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
 
       {/* Checkbox-Liste */}
       <div className="mb-6">
@@ -190,51 +168,66 @@ export default function CreateConcept() {
 
       {/* Button */}
       <div className="flex justify-end">
-
-
-
         <div className="flex justify-end">
-            
-  <button
-    onClick={async () => {
-      try {
-        if (selectedDocs.length === 0) {
-          alert('Bitte mindestens ein Dokument auswählen!')
-          return
-        }
+          <button
+            onClick={async () => {
+              try {
+                if (selectedDocs.length === 0) {
+                  alert('Bitte mindestens ein Dokument auswählen!')
+                  return
+                }
 
-        // 1️⃣ Konzept speichern
-        await handleSaveConcept()
+                // 1️⃣ Konzept speichern
+                await handleSaveConcept()
 
-        // 2️⃣ Hochladen in Drive
-        const res = await fetch('/api/add-customer-docs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerName: customer.name,
-            files: selectedDocs,
-          }),
-        })
+                // 2️⃣ Hochladen in PCloud
+                const res = await fetch('/api/add-customer-docs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    customerName: customer.name,
+                    files: selectedDocs,
+                  }),
+                })
 
-        const result = await res.json()
-        if (!res.ok) throw new Error(result.message)
+                const result = await res.json()
+                if (!res.ok) throw new Error(result.message)
 
-        alert(`✅ ${result.uploadedFiles.length} Dokument(e) erfolgreich in PCloud hochgeladen!`)
-      } catch (err) {
-        console.error('❌ Upload-Fehler:', err)
-        alert('Fehler beim Hochladen der Dokumente in PCloud.')
-      }
-    }}
-    className="bg-[#451a3d] text-white px-6 py-2 rounded-none hover:bg-[#6b3c67] transition-all focus:outline-none border-none"
-  >
-    Dokumente hinzufügen
-  </button>
-</div>
+                alert(`✅ ${result.uploadedFiles.length} Dokument(e) erfolgreich in PCloud hochgeladen!`)
 
+                // 3️⃣ Kundenordner anhand des Namens öffnen (statt ID)
+                const folderSearchUrl = `${process.env.NEXT_PUBLIC_PCLOUD_API_URL}/listfolder?folderid=${process.env.NEXT_PUBLIC_PCLOUD_CUSTOMERS_FOLDER_ID}&access_token=${process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN}`
+                const folderResponse = await fetch(folderSearchUrl)
+                const folderData = await folderResponse.json()
 
+                const folder = folderData.metadata?.contents?.find(
+                  (item) => item.name === customer.name && item.isfolder
+                )
 
+                if (!folder) {
+                  alert('Kein pCloud-Ordner für diesen Kunden gefunden.')
+                  return
+                }
 
+                const folderId = folder.folderid
+                const firstFile = result.uploadedFiles[0]
 
+                const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
+                  customer.name
+                )}&folderId=${folderId}&documentName=${encodeURIComponent(firstFile + '.pdf')}`
+
+                window.open(editorUrl, '_blank')
+
+              } catch (err) {
+                console.error('❌ Upload-Fehler:', err)
+                alert('Fehler beim Hochladen der Dokumente in PCloud.')
+              }
+            }}
+            className="bg-[#451a3d] text-white px-6 py-2 rounded-none hover:bg-[#6b3c67] transition-all focus:outline-none border-none"
+          >
+            Dokumente hinzufügen
+          </button>
+        </div>
       </div>
     </div>
   )

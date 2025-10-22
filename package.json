@@ -11,10 +11,18 @@
     "@supabase/supabase-js": "^2.75.0",
     "form-data": "^4.0.4",
     "googleapis": "^164.1.0",
+    "nanoid": "^5.1.6",
     "next": "^14.2.4",
     "nodemailer": "^7.0.9",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.296",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-pdf": "^10.2.0",
+    "react-qr-code": "^2.0.18",
+    "signature_pad": "^5.1.1",
+    "ua-parser-js": "^2.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",
