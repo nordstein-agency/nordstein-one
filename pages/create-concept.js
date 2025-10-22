@@ -171,14 +171,23 @@ export default function CreateConcept() {
         <div className="flex justify-end">
           <button
             onClick={async () => {
+              // 🪟 Tab sofort öffnen (Popup-Schutz umgehen)
+              const newTab = window.open('', '_blank')
+              if (newTab) {
+                newTab.document.write(`
+                  <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #451a3d;">
+                    <h2>📄 Dokument wird vorbereitet...</h2>
+                    <p>Bitte einen Moment Geduld.</p>
+                  </div>
+                `)
+              }
+
               try {
                 if (selectedDocs.length === 0) {
                   alert('Bitte mindestens ein Dokument auswählen!')
+                  if (newTab) newTab.close()
                   return
                 }
-
-                // 🪟 Tab sofort öffnen, um Popup-Blocking zu verhindern
-                const newTab = window.open('', '_blank')
 
                 // 1️⃣ Konzept speichern
                 await handleSaveConcept()
@@ -198,7 +207,7 @@ export default function CreateConcept() {
 
                 alert(`✅ ${result.uploadedFiles.length} Dokument(e) erfolgreich in PCloud hochgeladen!`)
 
-                // 3️⃣ Kundenordner anhand des Namens öffnen (statt ID)
+                // 3️⃣ Kundenordner anhand des Namens öffnen
                 const folderSearchUrl = `${process.env.NEXT_PUBLIC_PCLOUD_API_URL}/listfolder?folderid=${process.env.NEXT_PUBLIC_PCLOUD_CUSTOMERS_FOLDER_ID}&access_token=${process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN}`
                 const folderResponse = await fetch(folderSearchUrl)
                 const folderData = await folderResponse.json()
@@ -209,7 +218,7 @@ export default function CreateConcept() {
 
                 if (!folder) {
                   alert('Kein pCloud-Ordner für diesen Kunden gefunden.')
-                  newTab.close()
+                  if (newTab) newTab.close()
                   return
                 }
 
@@ -220,11 +229,12 @@ export default function CreateConcept() {
                   customer.name
                 )}&folderId=${folderId}&documentName=${encodeURIComponent(firstFile + '.pdf')}`
 
-                // 🔗 Weiterleitung in geöffnetem Tab
-                newTab.location.href = editorUrl
+                // 🔗 Tab weiterleiten
+                if (newTab) newTab.location.href = editorUrl
               } catch (err) {
                 console.error('❌ Upload-Fehler:', err)
                 alert('Fehler beim Hochladen der Dokumente in PCloud.')
+                if (newTab) newTab.close()
               }
             }}
             className="bg-[#451a3d] text-white px-6 py-2 rounded-none hover:bg-[#6b3c67] transition-all focus:outline-none border-none"
