@@ -64,29 +64,16 @@ export default function CreateConcept() {
     return <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">Lädt...</div>
   }
 
-  // 🔹 Hauptfunktion: Konzept speichern + Upload + Update
+  // 🔹 Hauptfunktion: Konzept speichern + Upload + Update + Editor öffnen
   const handleCreate = async () => {
-    // 🪟 Tab sofort öffnen, um Popup-Blocker zu umgehen
-    const newTab = window.open('about:blank', '_blank', 'noopener,noreferrer')
-    if (newTab) {
-      newTab.document.write(`
-        <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #451a3d;">
-          <h2>📄 Dokument wird vorbereitet...</h2>
-          <p>Bitte einen Moment Geduld.</p>
-        </div>
-      `)
-    }
-
     try {
       if (!customer) {
         alert('Kunde nicht gefunden.')
-        if (newTab) newTab.close()
         return
       }
 
       if (selectedDocs.length === 0) {
         alert('Bitte mindestens ein Dokument auswählen!')
-        if (newTab) newTab.close()
         return
       }
 
@@ -122,7 +109,7 @@ export default function CreateConcept() {
       console.log('✅ Upload abgeschlossen:', uploadResult)
 
       const uploadedFile = uploadResult.uploadedFiles[0]
-      const fileUrl = `https://pcloud.com/${customer.name}/${uploadedFile}.pdf` // Dummy-Fallback
+      const fileUrl = `https://pcloud.com/${customer.name}/${uploadedFile}.pdf` // Fallback
 
       // 3️⃣ Kundenordner in PCloud finden
       const folderSearchUrl = `${process.env.NEXT_PUBLIC_PCLOUD_API_URL}/listfolder?folderid=${process.env.NEXT_PUBLIC_PCLOUD_CUSTOMERS_FOLDER_ID}&access_token=${process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN}`
@@ -134,7 +121,6 @@ export default function CreateConcept() {
       )
       if (!folder) {
         alert('Kein pCloud-Ordner für diesen Kunden gefunden.')
-        if (newTab) newTab.close()
         return
       }
 
@@ -165,14 +151,12 @@ export default function CreateConcept() {
       const updateResult = await updateRes.json()
       console.log('🧩 Update-Ergebnis:', updateResult)
 
-      // 6️⃣ PDF-Editor öffnen
+      // 6️⃣ PDF-Editor direkt öffnen ✅
       const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
         customer.name
       )}&folderId=${folderId}&documentName=${encodeURIComponent(uploadedFile + '.pdf')}`
 
-      setTimeout(() => {
-        if (newTab) newTab.location.href = editorUrl
-      }, 300)
+      window.open(editorUrl, '_blank') // 👈 direkt öffnen, wie vorher
     } catch (err) {
       console.error('❌ Fehler in create-concept:', err)
       alert('Fehler beim Erstellen des Konzepts.')
@@ -236,6 +220,7 @@ export default function CreateConcept() {
         </div>
       </div>
 
+      {/* Button */}
       <div className="flex justify-end">
         <button
           onClick={handleCreate}
