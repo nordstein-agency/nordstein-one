@@ -1,5 +1,4 @@
 // pages/api/create-customer-folder.js
-import { google } from 'googleapis'
 import { supabase } from '../../lib/supabaseClient'
 
 export default async function handler(req, res) {
@@ -13,54 +12,59 @@ export default async function handler(req, res) {
       .select('id, name')
       .eq('id', customerId)
       .single()
-    if (error || !customer) return res.status(404).json({ error: 'Kunde nicht gefunden' })
 
+    if (error || !customer) return res.status(404).json({ error: 'Kunde nicht gefunden' })
     const customerName = (customer.name || '').trim()
 
-    // 2️⃣ Google-Auth vorbereiten
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        type: 'service_account',
-        project_id: process.env.GCP_PROJECT_ID,
-        private_key: process.env.GCP_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.GCP_CLIENT_EMAIL,
-      },
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    })
-    const drive = google.drive({ version: 'v3', auth })
+    // 2️⃣ pCloud Access Token abrufen
+    const { data: tokenRow } = await supabase
+      .from('pcloud_tokens')
+      .select('access_token')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
 
-    // 3️⃣ Hauptordner-ID aus Umgebungsvariable
-    const parentId = process.env.GCP_CUSTOMERS_ROOT_FOLDER_ID
+    if (!tokenRow) return res.status(400).json({ error: 'Kein pCloud Token gefunden' })
+    const accessToken = tokenRow.access_token
 
-    // 4️⃣ Prüfen, ob Ordner schon existiert
-    const query = `name='${customerName}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents`
-    const { data: existing } = await drive.files.list({ q: query, fields: 'files(id,name)' })
-    if (existing?.files?.length) {
-      return res.status(200).json({ message: 'Ordner existiert bereits', folderId: existing.files[0].id })
-    }
+    // 3️⃣ pCloud API: neuen Ordner erstellen
+    const parentFolderId = 19807810627 // dein "customers"-Ordner
 
-    // 5️⃣ Ordner erstellen
-    const fileMetadata = {
+    const folderUrl = `https://eapi.pcloud.com/createfolderifnotexists`
+    const params = new URLSearchParams({
       name: customerName,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [parentId],
-    }
-
-    const { data: folder } = await drive.files.create({
-      resource: fileMetadata,
-      fields: 'id, name',
+      folderid: parentFolderId,
+      access_token: accessToken,
     })
 
-    // 6️⃣ Ordner-ID in Supabase speichern
+    const resp = await fetch(`${folderUrl}?${params.toString()}`)
+    const data = await resp.json()
+
+    if (data.result !== 0) {
+      console.error('❌ Fehler bei pCloud:', data)
+      return res.status(400).json({ error: 'Fehler beim Erstellen des pCloud-Ordners', details: data })
+    }
+
+    const newFolderId = data.metadata?.folderid
+    console.log(`📁 pCloud-Ordner erstellt: ${customerName} (${newFolderId})`)
+
+    // 4️⃣ Ordner-ID in Supabase speichern
     const { error: updateError } = await supabase
       .from('customers')
-      .update({ drive_folder_id: folder.id })
+      .update({ pcloud_folder_id: newFolderId })
       .eq('id', customerId)
-    if (updateError) console.error('Fehler beim Speichern der Drive-Ordner-ID:', updateError)
 
-    return res.status(200).json({ message: 'Drive-Ordner erstellt', folderId: folder.id })
+    if (updateError) {
+      console.error('❌ Fehler beim Speichern der pCloud-Ordner-ID:', updateError)
+      return res.status(500).json({ error: 'Fehler beim Speichern der Ordner-ID in Supabase' })
+    }
+
+    return res.status(200).json({
+      message: 'pCloud-Ordner erfolgreich erstellt',
+      folderId: newFolderId,
+    })
   } catch (err) {
-    console.error('Drive-Ordner-Fehler:', err)
-    res.status(500).json({ error: 'Serverfehler beim Erstellen des Drive-Ordners' })
+    console.error('💥 Serverfehler beim Erstellen des pCloud-Ordners:', err)
+    res.status(500).json({ error: 'Serverfehler beim Erstellen des pCloud-Ordners', details: err.message })
   }
 }

@@ -219,10 +219,10 @@ export default function CreateConcept() {
         const result = await res.json()
         if (!res.ok) throw new Error(result.message)
 
-        alert(`✅ ${result.uploadedFiles.length} Dokument(e) erfolgreich in Google Drive hochgeladen!`)
+        alert(`✅ ${result.uploadedFiles.length} Dokument(e) erfolgreich in PCloud hochgeladen!`)
       } catch (err) {
         console.error('❌ Upload-Fehler:', err)
-        alert('Fehler beim Hochladen der Dokumente in Google Drive.')
+        alert('Fehler beim Hochladen der Dokumente in PCloud.')
       }
     }}
     className="bg-[#451a3d] text-white px-6 py-2 rounded-none hover:bg-[#6b3c67] transition-all focus:outline-none border-none"
