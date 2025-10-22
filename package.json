@@ -21,6 +21,7 @@
     "react-dom": "^18.2.0",
     "react-pdf": "^10.2.0",
     "react-qr-code": "^2.0.18",
+    "react-signature-canvas": "^1.1.0-alpha.2",
     "signature_pad": "^5.1.1",
     "ua-parser-js": "^2.0.6"
   },

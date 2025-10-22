@@ -4,8 +4,5 @@
   "/_document": "pages/_document.js",
   "/customers": "pages/customers.js",
   "/create-concept": "pages/create-concept.js",
-  "/pdf-editor": "pages/pdf-editor.js",
-  "/api/add-customer-docs": "pages/api/add-customer-docs.js",
-  "/api/get-pcloud-file": "pages/api/get-pcloud-file.js",
-  "/api/proxy-pdf": "pages/api/proxy-pdf.js"
+  "/pdf-editor": "pages/pdf-editor.js"
 }

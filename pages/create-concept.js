@@ -177,6 +177,9 @@ export default function CreateConcept() {
                   return
                 }
 
+                // 🪟 Tab sofort öffnen, um Popup-Blocking zu verhindern
+                const newTab = window.open('', '_blank')
+
                 // 1️⃣ Konzept speichern
                 await handleSaveConcept()
 
@@ -206,6 +209,7 @@ export default function CreateConcept() {
 
                 if (!folder) {
                   alert('Kein pCloud-Ordner für diesen Kunden gefunden.')
+                  newTab.close()
                   return
                 }
 
@@ -216,8 +220,8 @@ export default function CreateConcept() {
                   customer.name
                 )}&folderId=${folderId}&documentName=${encodeURIComponent(firstFile + '.pdf')}`
 
-                window.open(editorUrl, '_blank')
-
+                // 🔗 Weiterleitung in geöffnetem Tab
+                newTab.location.href = editorUrl
               } catch (err) {
                 console.error('❌ Upload-Fehler:', err)
                 alert('Fehler beim Hochladen der Dokumente in PCloud.')
