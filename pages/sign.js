@@ -20,54 +20,92 @@ export default function SignPage() {
     setCustomerName(parts[0] || '')
   }, [doc])
 
-  // ✍️ Signatur speichern
+
+
+
+
+
+  // ✍️ Signatur speichern (KORRIGIERT)
   const handleSaveSignature = async () => {
     if (sigPad.current.isEmpty()) {
       alert('Bitte unterschreibe zuerst!')
       return
     }
 
-    const signatureData = sigPad.current.toDataURL('image/png')
-    const signedAt = new Date().toISOString()
+    const signatureBase64 = sigPad.current.toDataURL('image/png')
+    const token = router.query.token // Der Token ist in der URL (von sign?token=...)
 
     setSaving(true)
-    setStatus('⏳ Speichere Signatur...')
+    setStatus('⏳ Sende Signatur zur Verarbeitung...')
 
     try {
-      // 1️⃣ Signatur als Bild in Supabase Storage hochladen
-      const fileName = `${doc || 'unbekannt'}_${session}_sign.png`
-      const { error: uploadError } = await supabase.storage
-        .from('signatures')
-        .upload(fileName, signatureData.split(',')[1], {
-          contentType: 'image/png',
-          upsert: true,
-        })
+      if (!token) throw new Error('Signatur-Token fehlt in der URL.')
 
-      if (uploadError) throw uploadError
+      // 1️⃣ Gerätedaten und Geo-Position abrufen (optional, aber gut für den Audit Trail)
+      const userAgent = navigator.userAgent;
+      const screen = { width: window.screen.width, height: window.screen.height };
+      let geo = null;
+      try {
+          // Versuche, Geo-Daten abzurufen (kann fehlschlagen/abgelehnt werden)
+          geo = await new Promise((resolve) => {
+              if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                      (pos) => resolve({ coords: pos.coords }),
+                      () => resolve(null), // Fehler
+                      { timeout: 5000 } // Timeout
+                  );
+              } else {
+                  resolve(null);
+              }
+          });
+      } catch (e) {
+        console.warn("Geo-Location konnte nicht abgerufen werden:", e);
+        // Nicht kritisch, wir machen weiter
+      }
 
-      // 2️⃣ Metadaten in die Supabase-Tabelle schreiben
-      const { error: dbError } = await supabase.from('customer_signatures').insert([
-        {
-          document_name: doc || 'unbekannt',
-          customer_name: customerName || 'Unbekannt',
-          signed_at: signedAt,
-          session_id: session,
-          signature_url: `https://qtniwqhmnfgftaqioinb.supabase.co/storage/v1/object/public/signatures/${fileName}`,
+
+      // 2️⃣ Daten an den Backend-Endpunkt senden
+      const submitRes = await fetch('/api/signature/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ])
+        body: JSON.stringify({
+          token: token,
+          signatureBase64: signatureBase64,
+          userAgent: userAgent,
+          screen: screen,
+          geo: geo,
+          // Weitere benötigte Daten aus router.query können hier hinzugefügt werden,
+          // aber der Token sollte alle notwendigen Infos in der Session halten.
+        }),
+      })
 
-      if (dbError) throw dbError
+      const submitData = await submitRes.json()
 
+      if (!submitRes.ok || submitData.error) {
+        throw new Error(submitData.error || 'Unbekannter API-Fehler.')
+      }
+      
+      // ACHTUNG: Die Felder doc und session in router.query MÜSSEN den Token halten.
+      // Ihre sign.js verwendet doc und session, aber der Backend-Endpunkt verwendet NUR token.
+      // Wir verwenden hier den Token-Parameter, der im verify- und submit-Endpunkt erwartet wird.
+      
       setSigned(true)
-      setStatus('✅ Signatur gespeichert!')
-      alert('Signatur erfolgreich gespeichert!')
+      setStatus('✅ Signatur erfolgreich verarbeitet und Dokument aktualisiert!')
     } catch (error) {
       console.error('❌ Fehler beim Speichern:', error)
-      setStatus('❌ Fehler beim Speichern')
+      setStatus(`❌ Fehler beim Speichern: ${error.message}`)
+      alert(`Fehler beim Speichern: ${error.message}`)
     } finally {
       setSaving(false)
     }
   }
+
+
+
+
+
 
   return (
     <div className="min-h-screen bg-[#f9f7f8] flex flex-col items-center justify-center p-6">
