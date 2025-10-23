@@ -1,75 +1,61 @@
 // /pages/api/signature/create.js
 import { supabase } from '../../../lib/supabaseClient';
-import { sha256 } from '../../../lib/hash'; // Angenommen, Sie benötigen sha256 hier nicht, aber ich lasse den Import, falls er existiert
-import { createId } from '@paralleldrive/cuid2'; // Angenommen, Sie verwenden cuid2 für den Token
-
-// Dauer, bis der Token abläuft (z.B. 30 Minuten)
-const TOKEN_EXPIRY_MINUTES = 30;
+import { nanoid } from 'nanoid'; // Behält den Original-Import bei
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  
   try {
-    // 1. Daten aus dem Frontend-Body entnehmen
-    const { 
-        customerId, 
-        customerName, 
-        documentName, 
-        role, 
-        folderId, 
-        signaturePosition // ✅ NEU: Die dynamische Position
-    } = req.body; 
-
-    if (!customerId || !documentName || !role || !folderId || !signaturePosition) {
-        return res.status(400).json({ error: 'Missing required fields (customerId, documentName, role, folderId, signaturePosition).' });
+    // req.body wird von Next.js automatisch geparst, wir destrukturieren es direkt.
+    // ✅ NEU: signaturePosition wird aus dem Body entnommen
+    const { customerId, customerName, documentName, folderId, role, signaturePosition } = req.body || {};
+    
+    // 💡 ANGEPASSTE PRÜFUNG: Jetzt signaturePosition prüfen, wenn sie für das Dokument zwingend ist
+    if (!customerName || !documentName || !role || !signaturePosition) {
+        // HINWEIS: customerId/folderId sind nullable, signaturePosition ist jetzt zwingend, 
+        // weil das Frontend sie immer senden muss.
+        return res.status(400).json({ error: 'Missing required fields (customerName, documentName, role, signaturePosition)' });
+    }
+    if (!['customer','executive'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // 2. Token generieren und Ablaufdatum festlegen
-    const newToken = createId(); 
-    const expirationDate = new Date();
-    expirationDate.setMinutes(expirationDate.getMinutes() + TOKEN_EXPIRY_MINUTES);
+    // 2. Token generieren (wie in der alten Version)
+    const token = nanoid(32);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // +30 Min
 
     // 3. Session in der Datenbank speichern
-    const { data, error } = await supabase
-        .from('signature_sessions')
-        .insert([
-            {
-                token: newToken,
-                customer_id: customerId,
-                customer_name: customerName,
-                document_name: documentName,
-                role: role,
-                folder_id: folderId,
-                // ✅ KORREKTUR: Die Position wird in die neue JSONB-Spalte gespeichert
-                signature_position: signaturePosition, 
-                expires_at: expirationDate.toISOString(),
-                used: false, // Standardmäßig auf 'false' setzen
-            }
-        ])
-        .select()
-        .single();
-    
+    const { error } = await supabase
+      .from('signature_sessions')
+      .insert({
+        token,
+        role,
+        customer_id: customerId, 
+        customer_name: customerName,
+        document_name: documentName,
+        folder_id: folderId,
+        // ✅ DER WICHTIGE FIX: Speichern der dynamischen Position
+        signature_position: signaturePosition,
+        expires_at: expiresAt,
+        used: false, // Fügt das 'used' Feld hinzu, falls es fehlt
+      });
+
     if (error) {
-        console.error('Database insertion failed in create.js:', error);
-        return res.status(500).json({ error: 'Failed to create signature session.' });
+        console.error("Supabase insert error:", error);
+        return res.status(500).json({ error: 'DB insert failed' });
     }
 
-    // 4. Signatur-URL für den QR-Code erstellen
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://${req.headers.host}`;
-    const signatureUrl = `${baseUrl}/signature?token=${newToken}`;
+    // 4. Link-Generierung (WIE IN DER ALTEN, FUNKTIONIERENDEN VERSION)
+    const VERCEL_URL = process.env.NEXT_PUBLIC_BASE_URL;
+    const dynamicOrigin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    const origin = VERCEL_URL || dynamicOrigin;
+    
+    // Generiert den korrekten Link ZU /sign?token=... (wie in Ihrer alten Version)
+    const qrUrl = `${origin}/sign?token=${encodeURIComponent(token)}`;
 
-    // 5. Erfolg zurückmelden
-    res.status(200).json({ 
-        ok: true, 
-        token: newToken, 
-        qrUrl: signatureUrl,
-        expiresAt: expirationDate.toISOString()
-    });
-
+    res.status(200).json({ qrUrl, token, expiresAt });
   } catch (e) {
-    console.error('signature/create error (FATAL CATCH)', e);
+    console.error('signature/create final catch error', e);
     res.status(500).json({ error: 'Server error' });
   }
 }
