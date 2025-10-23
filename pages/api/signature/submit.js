@@ -99,11 +99,14 @@ export default async function handler(req, res) {
     // 5) Alte Datei optional löschen (Template)
     // await deleteFileByPath({ path, accessToken });
 
+
+    const numericFolderId = Number(folder_id);
+
     // 6) Neue Datei hochladen
     // HINWEIS: Hier wird die folder_id verwendet, die aus der Session kommt. 
     // Wenn in der Session NULL steht, wird der Upload fehlschlagen!
     const uploaded = await uploadFileBuffer({
-      folderId: folder_id, // ACHTUNG: MUSS eine gültige Zahl sein!
+      folderId: numericFolderId, // ACHTUNG: MUSS eine gültige Zahl sein!
       filename: signedName,
       buffer: Buffer.from(finalBytes),
       accessToken
