@@ -6,33 +6,35 @@ import { supabase } from '../lib/supabaseClient'
 
 export default function SignPage() {
   const router = useRouter()
-  // Nur den 'token' abfragen
-  const { token } = router.query 
+  // 💡 KORREKTUR: Wir fragen den Token NICHT direkt ab, da er im SSR undefined ist.
+  // Wir warten auf router.isReady.
   
   const sigPad = useRef(null)
   const [signed, setSigned] = useState(false)
   const [customerName, setCustomerName] = useState('') 
   const [documentName, setDocumentName] = useState('Dokument') 
+  // 💡 KORREKTUR: Initialer Status ist 'Laden', nicht warten auf Token, da wir noch keinen haben.
   const [saving, setSaving] = useState(false)
-  const [status, setStatus] = useState('Lade Session...')
+  const [status, setStatus] = useState('Lade Initialdaten...') 
 
   // 🧭 Session und Kundennamen laden (KORRIGIERT: Wartet auf router.isReady)
   useEffect(() => {
-    // 1. Warten, bis der Router die Query-Parameter geladen hat (Next.js-Standard)
+    // 1. Warten, bis der Router die Query-Parameter geladen hat.
     if (!router.isReady) {
         setStatus('Initialisiere...')
         return
     }
     
-    // 2. Token direkt aus dem geladenen Router-Query holen
+    // 2. Token JETZT (nach isReady) sicher auslesen
     const currentToken = router.query.token;
 
     if (!currentToken) {
+        // Jetzt ist die URL geladen, und wir wissen, dass der Token fehlt.
         setStatus('❌ Fehler: Signatur-Token fehlt in der URL.')
         return
     }
     
-    // 3. Wenn der Token da ist, Status setzen und Verifizierung starten
+    // 3. Wenn der Token da ist, Verifizierung starten
     setStatus('Starte Verifizierung...')
 
     const verifyToken = async () => {
@@ -54,8 +56,6 @@ export default function SignPage() {
     }
     verifyToken()
 
-  // Abhängigkeiten: Führt den Effekt aus, sobald der Router bereit ist
-  // Wir nutzen hier router.isReady, da der Token sonst beim ersten Render undefined ist.
   }, [router.isReady]) 
   
 
@@ -66,7 +66,7 @@ export default function SignPage() {
       return
     }
     
-    // Token direkt aus router.query holen, da er im useEffect als verfügbar gesetzt wurde
+    // Token SICHER aus router.query holen
     const currentToken = router.query.token;
     const signatureBase64 = sigPad.current.toDataURL('image/png')
     
@@ -75,21 +75,21 @@ export default function SignPage() {
 
     try {
       if (!currentToken) {
+         // Der Token fehlt, wenn man speichert, bevor der Router bereit ist
          throw new Error('Signatur-Token fehlt oder Session ungültig.');
       }
       
-      // 1️⃣ Gerätedaten und Geo-Position abrufen (IMPLEMENTIERUNG HINZUGEFÜGT)
+      // 1️⃣ Gerätedaten und Geo-Position abrufen (Code von der letzten Antwort)
       const userAgent = navigator.userAgent;
       const screen = { width: window.screen.width, height: window.screen.height };
       let geo = null;
       try {
-          // Versuche, Geo-Daten abzurufen (kann fehlschlagen/abgelehnt werden)
           geo = await new Promise((resolve) => {
               if (navigator.geolocation) {
                   navigator.geolocation.getCurrentPosition(
                       (pos) => resolve({ coords: pos.coords }),
-                      () => resolve(null), // Fehler
-                      { timeout: 5000 } // Timeout
+                      () => resolve(null),
+                      { timeout: 5000 }
                   );
               } else {
                   resolve(null);
@@ -106,7 +106,7 @@ export default function SignPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: currentToken, // HIER wird der Token verwendet
+          token: currentToken, 
           signatureBase64: signatureBase64,
           userAgent: userAgent,
           screen: screen,
