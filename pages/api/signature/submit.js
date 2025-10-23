@@ -40,6 +40,11 @@ export default async function handler(req, res) {
 
     const { role, customer_id, customer_name, document_name, folder_id } = session;
 
+
+    console.log('DB-Suche gestartet für...');
+    console.log('CustomerName (Session):', customer_name);
+    console.log('DocumentName (Session):', document_name);
+
     // 2) PDF-Template aus der Contracts-Tabelle holen
     
     // ✅ FIX: Download-Link aus der Contracts-Tabelle holen
