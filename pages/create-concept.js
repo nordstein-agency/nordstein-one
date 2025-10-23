@@ -64,108 +64,125 @@ export default function CreateConcept() {
     return <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">Lädt...</div>
   }
 
-  // 🔹 Hauptfunktion: Konzept speichern + Upload + Update + Editor öffnen
-  const handleCreate = async () => {
-    try {
-      if (!customer) {
-        alert('Kunde nicht gefunden.')
-        return
-      }
 
-      if (selectedDocs.length === 0) {
-        alert('Bitte mindestens ein Dokument auswählen!')
-        return
-      }
 
-      // 1️⃣ Vertrag in Supabase anlegen
-      const { data: contractData, error: insertError } = await supabase
-        .from('contracts')
-        .insert([
-          {
-            tarif: selectedConcept,
-            customer_id: customer.id,
-            user_id: customer.user_id,
-            state: 'Antrag',
-          },
-        ])
-        .select('id')
-        .single()
-
-      if (insertError) throw insertError
-      console.log('📦 Neuer Vertrag erstellt:', contractData)
-
-      // 2️⃣ Datei in PCloud hochladen
-      const uploadRes = await fetch('/api/add-customer-docs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: customer.name,
-          files: selectedDocs,
-        }),
-      })
-
-      const uploadResult = await uploadRes.json()
-      if (!uploadRes.ok) throw new Error(uploadResult.message)
-      console.log('✅ Upload abgeschlossen:', uploadResult)
-
-      const uploadedFile = uploadResult.uploadedFiles[0]
-      const fileUrl = `https://pcloud.com/${customer.name}/${uploadedFile}.pdf` // Fallback
-
-      // 3️⃣ Kundenordner in PCloud finden
-      const folderSearchUrl = `${process.env.NEXT_PUBLIC_PCLOUD_API_URL}/listfolder?folderid=${process.env.NEXT_PUBLIC_PCLOUD_CUSTOMERS_FOLDER_ID}&access_token=${process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN}`
-      const folderResponse = await fetch(folderSearchUrl)
-      const folderData = await folderResponse.json()
-
-      const folder = folderData.metadata?.contents?.find(
-        (item) => item.name === customer.name && item.isfolder
-      )
-      if (!folder) {
-        alert('Kein pCloud-Ordner für diesen Kunden gefunden.')
-        return
-      }
-
-      const folderId = folder.folderid
-
-      // 4️⃣ PDF-Link ermitteln
-      const fileLinkRes = await fetch(
-        `${process.env.NEXT_PUBLIC_PCLOUD_API_URL}/getfilelink?path=/customers/${encodeURIComponent(
-          customer.name
-        )}/${encodeURIComponent(uploadedFile)}.pdf&access_token=${
-          process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN
-        }`
-      )
-      const fileLinkData = await fileLinkRes.json()
-      const fileUrlFinal =
-        fileLinkData.result === 0 && fileLinkData.host && fileLinkData.path
-          ? `https://${fileLinkData.host}${fileLinkData.path}`
-          : fileUrl
-
-      console.log('🔗 Finaler PDF-Link:', fileUrlFinal)
-
-      // 5️⃣ Supabase mit pdf_url updaten
-      const updateRes = await fetch('/api/update-contract-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: contractData.id, pdfUrl: fileUrlFinal }),
-      })
-      const updateResult = await updateRes.json()
-      console.log('🧩 Update-Ergebnis:', updateResult)
-
-      // 6️⃣ PDF-Editor direkt öffnen ✅
-      const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
-        customer.name
-      )}&folderId=${folderId}&documentName=${encodeURIComponent(uploadedFile + '.pdf')}`
-
-      window.open(editorUrl, '_blank') // 👈 direkt öffnen, wie vorher
-    } catch (err) {
-      console.error('❌ Fehler in create-concept:', err)
-      alert('Fehler beim Erstellen des Konzepts.')
+  // 🔹 Hauptfunktion
+const handleCreate = async () => {
+  try {
+    if (!customer) {
+      alert('Kunde nicht gefunden.')
+      return
     }
+
+    if (selectedDocs.length === 0) {
+      alert('Bitte mindestens ein Dokument auswählen!')
+      return
+    }
+
+    // 1️⃣ Datei(en) in PCloud hochladen
+    const uploadRes = await fetch('/api/add-customer-docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerName: customer.name,
+        files: selectedDocs,
+      }),
+    })
+
+    const uploadResult = await uploadRes.json()
+    if (!uploadRes.ok) throw new Error(uploadResult.message)
+    console.log('✅ Upload abgeschlossen:', uploadResult)
+
+    const uploadedFile = uploadResult.uploadedFiles[0] // Name ohne .pdf (z.B. "Dienstleistungsvertrag")
+    const fileId = uploadResult.fileIds?.[0]
+    const folderId = uploadResult.folderId
+
+    if (!fileId || !folderId) {
+      alert('Fehler: Datei- oder Ordner-ID fehlt in der Upload-Antwort.')
+      console.error('❌ Ungültige Upload-Response:', uploadResult)
+      return
+    }
+
+    console.log('📂 Datei-Infos:', { uploadedFile, fileId, folderId })
+
+    // 2️⃣ Öffentlichen Link erzeugen und direkten Download-Link holen
+    const publinkRes = await fetch('/api/create-publink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileid: fileId }),
+    })
+
+    if (!publinkRes.ok) {
+        const errText = await publinkRes.text()
+        console.error('❌ /api/create-publink fehlgeschlagen:', errText)
+        alert('Fehler beim Erzeugen des öffentlichen Links.')
+        return
+    }
+
+    const publinkData = await publinkRes.json()
+    console.log('📄 PublinkData:', publinkData)
+
+
+    let fileUrlFinal = null;
+    
+    // Prüfen, ob der Backend-Code erfolgreich war und die finale URL zurückgegeben hat
+    if (publinkData.result === 0 && publinkData.final_url) { 
+        
+        // 💡 KORREKTUR START 💡
+        const directDownloadUrl = publinkData.final_url; // Der direkte Link von getpublinkdownload
+        const fullDocumentName = uploadedFile + '.pdf';
+        
+        // Fügen Sie den 'forcename'-Parameter zur finalen URL hinzu, um den korrekten 
+        // Dateinamen und Content-Type im Browser zu erzwingen und die PDF lesbar zu machen.
+        fileUrlFinal = `${directDownloadUrl}&forcename=${encodeURIComponent(fullDocumentName)}`;
+        
+        console.log('🔗 Finaler, direkter PDF-Link (mit forcename):', fileUrlFinal)
+        // 💡 KORREKTUR ENDE 💡
+        
+    } else {
+        alert('Fehler beim Erzeugen des direkten Download-Links. Prüfen Sie die Server-Logs.')
+        return
+    }
+
+    
+    // 3️⃣ Vertrag in Supabase direkt mit PDF-Link anlegen
+    const { data: contractData, error: insertError } = await supabase
+      .from('contracts')
+      .insert([
+        {
+          tarif: selectedConcept,
+          customer_id: customer.id,
+          user_id: customer.user_id,
+          state: 'Antrag',
+          pdf_url: fileUrlFinal, // 👈 Jetzt den direkten, finalen Link speichern
+        },
+      ])
+      .select('id')
+      .single()
+
+    if (insertError) throw insertError
+    console.log('📦 Neuer Vertrag erstellt:', contractData)
+
+    // 4️⃣ PDF-Editor öffnen
+    const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
+      customer.name
+    )}&folderId=${folderId}&documentName=${encodeURIComponent(uploadedFile + '.pdf')}`
+
+    window.open(editorUrl, '_blank')
+  } catch (err) {
+    console.error('❌ Fehler in create-concept:', err)
+    alert(`Fehler beim Erstellen des Konzepts:\n${err?.message || err}`)
   }
+}
+
+
+
+
+
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Konzepterstellung</h1>
         <button
@@ -176,14 +193,12 @@ export default function CreateConcept() {
         </button>
       </div>
 
-      {/* Kunde */}
       {customer && (
         <p className="mb-4 text-[#6b3c67]">
           <strong>Kunde:</strong> {customer.name}
         </p>
       )}
 
-      {/* Konzept Dropdown */}
       <div className="mb-6 max-w-xs">
         <label className="block mb-2 font-semibold text-[#451a3d]">Konzept wählen</label>
         <select
@@ -198,7 +213,6 @@ export default function CreateConcept() {
         </select>
       </div>
 
-      {/* Templates */}
       <div className="mb-6">
         <label className="block mb-2 font-semibold">Dokumentenvorlagen</label>
         <div className="flex flex-col gap-2 border border-gray-200 rounded p-4 bg-white">
@@ -220,7 +234,6 @@ export default function CreateConcept() {
         </div>
       </div>
 
-      {/* Button */}
       <div className="flex justify-end">
         <button
           onClick={handleCreate}

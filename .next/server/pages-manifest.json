@@ -2,10 +2,11 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/contracts": "pages/contracts.js",
   "/customers": "pages/customers.js",
   "/create-concept": "pages/create-concept.js",
   "/api/add-customer-docs": "pages/api/add-customer-docs.js",
-  "/api/update-contract-pdf": "pages/api/update-contract-pdf.js",
+  "/api/create-publink": "pages/api/create-publink.js",
   "/pdf-editor": "pages/pdf-editor.js",
   "/api/get-pcloud-file": "pages/api/get-pcloud-file.js",
   "/api/proxy-pdf": "pages/api/proxy-pdf.js"

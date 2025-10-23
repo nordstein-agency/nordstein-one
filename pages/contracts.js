@@ -15,18 +15,36 @@ const euroStageMap = {
   'Senior Vice President': 12
 }
 
-const handleDownload = async (pdfUrl, title = 'vertrag') => {
-  try {
-    if (!pdfUrl) {
-      alert('Kein PDF für diesen Vertrag hinterlegt.')
-      return
-    }
 
-    if (pdfUrl.startsWith('http')) {
-      const response = await fetch(pdfUrl)
-      if (!response.ok) throw new Error('Fehler beim Abrufen der PDF')
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+
+
+
+
+// 💡 KORRIGIERTE HANDLE-DOWNLOAD-FUNKTION 💡
+// Wir verwenden KEIN FETCH mehr, um Blob-Korruption bei Cross-Origin-Downloads
+// von PCloud zu vermeiden. Stattdessen öffnen wir den Link direkt im Browser,
+// der ihn korrekt als Download behandeln kann (da der Link mit &forcename 
+// in create-concept.js bereits optimiert wurde).
+const handleDownload = (pdfUrl, title = 'vertrag') => {
+  if (!pdfUrl) {
+    alert('Kein PDF für diesen Vertrag hinterlegt.')
+    return
+  }
+
+  // Wenn es eine HTTP-URL (PCloud-Link) ist, öffnen wir sie direkt.
+  if (pdfUrl.startsWith('http')) {
+    window.open(pdfUrl, '_blank')
+    return
+  }
+  
+  // Wenn es KEINE HTTP-URL (sondern ein Supabase Storage Pfad) ist, 
+  // verwenden wir den ursprünglichen Supabase-Download-Mechanismus.
+  try {
+    const downloadSupabase = async () => {
+      const { data, error } = await supabase.storage.from('contracts').download(pdfUrl)
+      if (error) throw error
+
+      const url = window.URL.createObjectURL(data)
       const link = document.createElement('a')
       link.href = url
       link.setAttribute('download', `${title}.pdf`)
@@ -34,25 +52,18 @@ const handleDownload = async (pdfUrl, title = 'vertrag') => {
       link.click()
       link.remove()
       window.URL.revokeObjectURL(url)
-      return
     }
-
-    const { data, error } = await supabase.storage.from('contracts').download(pdfUrl)
-    if (error) throw error
-
-    const url = window.URL.createObjectURL(data)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `${title}.pdf`)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
+    downloadSupabase();
   } catch (err) {
     console.error('Fehler beim Herunterladen der PDF:', err)
     alert('Fehler beim Herunterladen der PDF.')
   }
 }
+
+
+
+
+
 
 export default function Contracts() {
   const [contracts, setContracts] = useState([])
