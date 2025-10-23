@@ -6,7 +6,6 @@ import { sha256 } from '../../../lib/hash';
 import UAParser from 'ua-parser-js';
 
 async function getAccessToken() {
-  // hol den neuesten pCloud-Token aus deiner Tabelle (du hast das schon genutzt)
   const { data } = await supabase
     .from('pcloud_tokens')
     .select('access_token')
@@ -20,7 +19,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const body = JSON.parse(req.body || '{}');
+    // 1. KORREKTUR: Entferne JSON.parse (req.body ist bereits ein Objekt)
+    const body = req.body || {}; 
     const { token, signatureBase64, userAgent, screen, geo } = body;
     if (!token || !signatureBase64) return res.status(400).json({ error: 'Missing token or signature' });
 
@@ -37,15 +37,9 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken();
     if (!accessToken) return res.status(500).json({ error: 'No pCloud token available' });
 
-    const { role, customer_id, customer_name, document_name, folder_id } = {
-      role: session.role,
-      customer_id: session.customer_id,
-      customer_name: session.customer_name,
-      document_name: session.document_name,
-      folder_id: session.folder_id
-    };
+    const { role, customer_id, customer_name, document_name, folder_id } = session;
 
-    // 2) PDF-Template aus pCloud holen (Pfad: /customers/<Name>/<DocName>)
+    // 2) PDF-Template aus pCloud holen
     const path = `/customers/${customer_name}/${document_name}`;
     const fileUrl = await getFileLinkByPath({ path, accessToken });
     const fileResp = await fetch(fileUrl);
@@ -54,12 +48,12 @@ export default async function handler(req, res) {
 
     // 3) PDF bearbeiten: Unterschrift + Zeitstempel + Gerätedaten
     const pdfDoc = await PDFDocument.load(templateBytes);
-    const page = pdfDoc.getPage(0); // simpel: erste Seite; später: Koordinaten pro Dokument
+    const page = pdfDoc.getPage(0);
+    
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // einfache Position unten links; später: feste Felder/Koordinaten je Template
     const x = 50, y = 120;
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
@@ -83,17 +77,17 @@ export default async function handler(req, res) {
     const finalBytes = await pdfDoc.save();
     const finalHash = await sha256(finalBytes);
 
-    // 4) finalen Namen bestimmen (z.B. *_signed_customer.pdf oder *_signed_executive.pdf)
+    // 4) finalen Namen bestimmen
     const signedSuffix = role === 'customer' ? '_signed_customer' : '_signed_executive';
     const signedName =
       document_name.toLowerCase().endsWith('.pdf')
         ? document_name.replace(/\.pdf$/i, `${signedSuffix}.pdf`)
         : `${document_name}${signedSuffix}.pdf`;
 
-    // 5) Alte Datei optional löschen (Template) – NUR wenn du das wirklich willst:
+    // 5) Alte Datei optional löschen (Template)
     // await deleteFileByPath({ path, accessToken });
 
-    // 6) Neue Datei hochladen (selber Ordner)
+    // 6) Neue Datei hochladen
     const uploaded = await uploadFileBuffer({
       folderId: folder_id,
       filename: signedName,
@@ -116,18 +110,26 @@ export default async function handler(req, res) {
     const { error: sigErr } = await supabase.from(table).insert({
       customer_id,
       document_name: signedName,
-      pcloud_file_id: fileId,
-      file_hash: finalHash,
-      device_info
+      // 2. KORREKTUR (Rückgängig gemacht): Verwendung des korrekten Spaltennamens 'pcloud_file_id'
+      pcloud_file_id: fileId, 
+      // 3. KORREKTUR: Verwendung des korrekten Spaltennamens 'hash' aus Ihrem Schema
+      hash: finalHash, 
+      device_info,
+      // 4. KORREKTUR: signed_at hinzufügen, da es nullable ist und keinen DB-Default hat
+      signed_at: new Date().toISOString() 
     });
-    if (sigErr) return res.status(500).json({ error: 'DB insert signature failed' });
+    
+    if (sigErr) {
+        console.error("Supabase insert signature failed:", sigErr);
+        return res.status(500).json({ error: 'DB insert signature failed' });
+    }
 
     // 8) Session als used markieren
     await supabase.from('signature_sessions').update({ used: true }).eq('token', token);
 
     res.status(200).json({ ok: true, signedName, fileId, hash: finalHash });
   } catch (e) {
-    console.error('signature/submit error', e);
+    console.error('signature/submit error (FATAL CATCH)', e);
     res.status(500).json({ error: 'Server error' });
   }
 }
