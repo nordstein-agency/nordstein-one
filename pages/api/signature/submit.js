@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud';
 import { sha256 } from '../../../lib/hash';
-import UAParser from 'ua-parser-js';
+//import UAParser from 'ua-parser-js';
 
 async function getAccessToken() {
   // hol den neuesten pCloud-Token aus deiner Tabelle (du hast das schon genutzt)
@@ -71,6 +71,7 @@ export default async function handler(req, res) {
     // Zeitstempel + Geräteinfos
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const ts = new Date();
+    const UAParser = require('ua-parser-js');
     const parser = new UAParser(userAgent || '');
     const ua = parser.getResult();
     const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
