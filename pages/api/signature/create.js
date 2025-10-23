@@ -30,8 +30,17 @@ export default async function handler(req, res) {
 
     if (error) return res.status(500).json({ error: 'DB insert failed' });
 
-    // Basis-URL aus Request (funktioniert in Codespaces/Vercel)
-    const origin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    // 💡 KORREKTUR: Basis-URL wird über eine Umgebungsvariable geholt.
+    // Dies ist die robusteste Methode für Vercel.
+    const VERCEL_URL = process.env.NEXT_PUBLIC_BASE_URL;
+    
+    // Fallback auf dynamische Header, falls die Umgebungsvariable nicht gesetzt ist.
+    const dynamicOrigin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    
+    // Verwende die Umgebungsvariable, wenn sie existiert, sonst den dynamischen Wert.
+    const origin = VERCEL_URL || dynamicOrigin;
+    
+    // Stelle sicher, dass die URL https://one.nordstein-agency.com/sign?token=... ist.
     const qrUrl = `${origin}/sign?token=${encodeURIComponent(token)}`;
 
     res.status(200).json({ qrUrl, token, expiresAt });
