@@ -1,9 +1,12 @@
-// /components/PdfViewer.js (VOLLSTÄNDIG KORRIGIERT FÜR DYNAMISCHE POSITION & RELOAD FIX)
+// /components/PdfViewer.js (VOLLSTÄNDIG KORRIGIERT FÜR DYNAMISCHE POSITION DURCH MAUSKLICK)
 
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useRouter } from 'next/router';
+
+// ⚠️ WICHTIG: Die Höhe des iFrames muss hier für die Y-Achsen-Berechnung bekannt sein
+const IFRAME_HEIGHT = 900; 
 
 export default function PdfViewer({ fileUrl, documentName, customerName: propCustomerName, folderId, customerId, onSignatureClose }) {
   const router = useRouter();
@@ -14,7 +17,12 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
   const [signatureQr, setSignatureQr] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
   
-  // ✅ NEU: State für die Signaturposition (wird hier simuliert)
+  // ✅ NEU: State für den Platzierungsmodus
+  const [placementMode, setPlacementMode] = useState(false);
+  
+  // ✅ NEU: Ref für den Container, um Klick-Koordinaten zu berechnen
+  const pdfContainerRef = useRef(null); 
+  
   const [sigPosition, setSigPosition] = useState(null); 
 
   const finalCustomerName = propCustomerName || 'UnbekannterKunde';
@@ -34,13 +42,38 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
     alert('📝 (Demo) Textfeld hinzugefügt – hier später frei positionierbar.');
   };
 
-  // 💡 NEUE FUNKTION: Simuliert das Setzen der Position (später mit Klick-Logik ersetzen)
+  // 💡 FUNKTION: Aktiviert den Platzierungsmodus
   const handlePlaceSignature = () => {
-      // Setzt eine feste Testposition auf Seite 1. 
-      // Diese Werte müssen in der finalen Lösung durch tatsächliche Klick-Koordinaten ersetzt werden.
-      const newPos = { x: 450, y: 180, page: 1 }; 
+      setPlacementMode(true);
+      setSigPosition(null); // Alte Position zurücksetzen
+      // alert("Klicke jetzt auf die Stelle im PDF, wo die Unterschrift platziert werden soll.");
+  };
+  
+  // 🖱️ NEUE FUNKTION: Fängt den Mausklick auf dem Overlay ab und speichert die PDF-Koordinate
+  const handlePdfClick = (event) => {
+      if (!placementMode || !pdfContainerRef.current) return;
+      
+      const rect = pdfContainerRef.current.getBoundingClientRect();
+      
+      // 1. Klick-Koordinate innerhalb des Containers (Browser-Achse: Y von oben)
+      const clickX = event.clientX - rect.left;
+      const clickY = event.clientY - rect.top;
+      
+      // 2. Umrechnung in PDF-Koordinaten (PDF-Achse: Y von unten)
+      // Wir nehmen die feste Höhe des iFrames (900px) an
+      const pdfY = IFRAME_HEIGHT - clickY; 
+      const pdfX = clickX; 
+      
+      // Wir verwenden Seite 1 als Standard (für Multi-Page müsste das komplexer sein)
+      const newPos = { 
+          x: Math.round(pdfX), 
+          y: Math.round(pdfY), 
+          page: 1 
+      }; 
+      
       setSigPosition(newPos);
-      alert(`✅ Signaturposition gesetzt bei: X=${newPos.x}, Y=${newPos.y} auf Seite ${newPos.page}.`);
+      setPlacementMode(false); // Modus deaktivieren
+      console.log(`✅ Position gespeichert: (${newPos.x}, ${newPos.y}) auf Seite ${newPos.page}.`);
   };
 
   // ✍️ API-Aufruf, um den Token-Link abzurufen
@@ -116,7 +149,10 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
       {/* Toolbar */}
       <div className="flex gap-4 mb-4">
         <button
-          onClick={() => setEditing(!editing)}
+          onClick={() => {
+            setEditing(!editing);
+            setPlacementMode(false); // Modus bei Beenden/Starten ausschalten
+          }}
           className="bg-[#451a3d] text-white px-4 py-2"
         >
           {editing ? 'Bearbeitung beenden' : 'Bearbeiten'}
@@ -131,10 +167,17 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
               Textfeld hinzufügen
             </button>
             
-            {/* ✅ NEUER BUTTON FÜR POSITIONIERUNG */}
+            {/* ✅ BUTTON FÜR POSITIONIERUNG */}
             <button
               onClick={handlePlaceSignature}
-              className={`px-4 py-2 ${sigPosition ? 'bg-green-600' : 'bg-[#3498db]'} text-white`} 
+              className={`px-4 py-2 text-white transition-colors duration-200 
+                ${placementMode 
+                  ? 'bg-orange-500 animate-pulse' 
+                  : sigPosition 
+                    ? 'bg-green-600' 
+                    : 'bg-[#3498db]'
+                }`
+              } 
             >
               Position festlegen {sigPosition ? ' (Gesetzt!)' : ''}
             </button>
@@ -142,7 +185,7 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
 
             <button
               onClick={handleAddSignature}
-              disabled={loadingQr || !sigPosition} // Deaktiviert, wenn keine Position gesetzt ist
+              disabled={loadingQr || !sigPosition || placementMode} // Deaktiviert, wenn keine Position gesetzt ist oder im Platzierungsmodus
               className="bg-[#007bff] text-white px-4 py-2"
             >
               {loadingQr ? 'Link generieren...' : 'Signatur starten'}
@@ -158,15 +201,45 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
         )}
       </div>
 
-      {/* PDF Anzeige */}
-      <div className="bg-white shadow-lg p-2 border border-[#ddd] w-full max-w-5xl">
+      {/* 🖼️ PDF Anzeige mit Klick-Overlay */}
+      <div 
+        ref={pdfContainerRef} // Ref hinzufügen
+        onClick={handlePdfClick} // Klick-Handler hinzufügen
+        style={{ height: `${IFRAME_HEIGHT}px` }} // Feste Höhe setzen
+        className={`relative bg-white shadow-lg p-2 border border-[#ddd] w-full max-w-5xl transition-all 
+          ${placementMode ? 'cursor-crosshair' : ''} 
+        `}
+      >
         <iframe
           src={proxyUrl}
           width="100%"
-          height="900px"
+          height="100%" // Passt sich dem Elternelement an (900px)
           style={{ border: 'none' }}
           title="PDF Viewer"
+          // 💡 WICHTIG: Das Iframe muss Klicks ignorieren, wenn im Placement Mode
+          className={placementMode ? 'pointer-events-none opacity-50' : ''}
         />
+        
+        {/* 💡 Visueller Marker für die gesetzte Position */}
+        {sigPosition && !placementMode && (
+             <div 
+                style={{ 
+                    position: 'absolute', 
+                    // Konvertierung zurück in Browser-Koordinaten für die Anzeige (Y von oben)
+                    left: `${sigPosition.x}px`, 
+                    top: `${IFRAME_HEIGHT - sigPosition.y}px`, 
+                    transform: 'translate(-50%, -100%)', // Zentriert den Marker am Klickpunkt
+                    width: '40px', 
+                    height: '40px', 
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 0, 0, 0.4)', 
+                    border: '2px dashed red',
+                    pointerEvents: 'none', // Muss Klicks ignorieren
+                    zIndex: 10
+                }}
+                title={`Gesetzte PDF-Koordinate: X:${sigPosition.x}, Y:${sigPosition.y}`}
+             />
+        )}
       </div>
 
       {/* Signatur QR-Code Modal */}
