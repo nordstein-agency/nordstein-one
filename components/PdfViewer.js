@@ -1,11 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react'; 
-// Importieren Sie useRouter, um bei Bedarf auf Router-Informationen zuzugreifen (optional, aber gut für Konsistenz)
 import { useRouter } from 'next/router'; 
 
 export default function PdfViewer({ fileUrl, documentName }) {
-  const router = useRouter(); // Kann nützlich sein, um Kundendaten aus der URL zu holen
+  const router = useRouter(); 
   
   const [proxyUrl, setProxyUrl] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -13,9 +12,9 @@ export default function PdfViewer({ fileUrl, documentName }) {
   const [signatureQr, setSignatureQr] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
   
-  // 💡 NEU: Statische/bekannte Kundendaten für den API-Aufruf (Muss von irgendwo kommen)
-  const customerId = 'KUNDE_123'; // Beispielwert
-  const customerName = 'Max Mustermann'; // Beispielwert
+  // 💡 HINWEIS: customerName MUSS dynamisch von der aufrufenden Seite kommen
+  // Hier wird ein Platzhalter verwendet
+  const customerName = 'Max Mustermann'; 
 
   useEffect(() => {
     if (fileUrl) {
@@ -35,17 +34,26 @@ export default function PdfViewer({ fileUrl, documentName }) {
   // ✍️ KORRIGIERT: Ruft die API auf, um den Token-Link abzurufen
   const handleAddSignature = async () => {
     setLoadingQr(true);
-    setSignatureQr(null); // Alten QR-Code löschen
+    setSignatureQr(null); 
 
     try {
         // Daten für die API-Route vorbereiten
         const signatureData = {
-            customerId: customerId, // Muss im echten Code dynamisch sein
-            customerName: customerName, // Muss im echten Code dynamisch sein
+            // 💡 KORREKTUR: customerId (UUID) und folderId (int8) entfernt, 
+            // da sie als ungültige Strings gesendet wurden und nullable sind.
+            // Im echten Code müssten hier dynamische, gültige UUIDs/Zahlen stehen.
+            
+            // customerId: 'KUNDE_123', // <--- Entfernt, da ungültiger Typ
+            // folderId: 'FOLDER_ABC', // <--- Entfernt, da ungültiger Typ
+            
+            customerName: customerName, 
             documentName: documentName,
-            folderId: 'FOLDER_ABC', // Muss im echten Code dynamisch sein
-            role: 'customer' // Rolle für die Signatur
+            // Im echten Code muss folderId (int8) und customerId (uuid) bei Bedarf hinzugefügt werden
+            role: 'customer' // Rolle für die Signatur (Muss aus dem Frontend kommen)
         };
+        
+        // Die API benötigt documentName, customerName und role, die hier gesendet werden.
+        // customerId und folderId werden jetzt als NULL in Supabase eingefügt.
 
         // API-Aufruf an den Token-Generator
         const res = await fetch('/api/signature/create', {
@@ -57,7 +65,6 @@ export default function PdfViewer({ fileUrl, documentName }) {
         const data = await res.json();
 
         if (res.ok && data.qrUrl) {
-            // ✅ Erfolgreich: API gibt den Link mit ?token=... zurück
             setSignatureQr(data.qrUrl); 
             setSignatureMode(true);
         } else {
@@ -101,7 +108,7 @@ export default function PdfViewer({ fileUrl, documentName }) {
 
             <button
               onClick={handleAddSignature}
-              disabled={loadingQr} // Deaktivieren, während der Link generiert wird
+              disabled={loadingQr} 
               className="bg-[#007bff] text-white px-4 py-2"
             >
               {loadingQr ? 'Link generieren...' : 'Signaturfeld hinzufügen'}
@@ -129,7 +136,7 @@ export default function PdfViewer({ fileUrl, documentName }) {
       </div>
 
       {/* Signatur QR-Code Modal */}
-      {signatureMode && signatureQr && ( // Zeige nur, wenn ein Link vorhanden ist
+      {signatureMode && signatureQr && ( 
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded shadow-lg text-center">
             <h2 className="text-lg font-bold mb-2">📱 QR-Code für Signatur</h2>
