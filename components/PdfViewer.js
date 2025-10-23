@@ -55,13 +55,16 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
       
       const rect = pdfContainerRef.current.getBoundingClientRect();
       
+      // ✅ FIX: Die tatsächliche Höhe des Containers verwenden
+      const containerHeight = pdfContainerRef.current.clientHeight; 
+      
       // 1. Klick-Koordinate innerhalb des Containers (Browser-Achse: Y von oben)
       const clickX = event.clientX - rect.left;
       const clickY = event.clientY - rect.top;
       
       // 2. Umrechnung in PDF-Koordinaten (PDF-Achse: Y von unten)
-      // Wir nehmen die feste Höhe des iFrames (900px) an
-      const pdfY = IFRAME_HEIGHT - clickY; 
+      // Wir verwenden die dynamisch gemessene Höhe anstelle der festen IFRAME_HEIGHT
+      const pdfY = containerHeight - clickY; // FIX DURCH VERWENDUNG VON containerHeight
       const pdfX = clickX; 
       
       // Wir verwenden Seite 1 als Standard (für Multi-Page müsste das komplexer sein)
@@ -227,7 +230,8 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
                     position: 'absolute', 
                     // Konvertierung zurück in Browser-Koordinaten für die Anzeige (Y von oben)
                     left: `${sigPosition.x}px`, 
-                    top: `${IFRAME_HEIGHT - sigPosition.y}px`, 
+                    // 🛑 KORREKTUR: Muss die dynamische Höhe verwenden, um den Marker korrekt zu positionieren
+                    top: `${pdfContainerRef.current?.clientHeight - sigPosition.y}px`, 
                     transform: 'translate(-50%, -100%)', // Zentriert den Marker am Klickpunkt
                     width: '40px', 
                     height: '40px', 
