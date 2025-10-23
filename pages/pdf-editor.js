@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 export default function PdfEditor() {
   const router = useRouter();
-  const { customerName, documentName } = router.query;
+  const { customerName, documentName, folderId} = router.query;
   const [fileUrl, setFileUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -85,5 +85,5 @@ export default function PdfEditor() {
     );
 
   // 📄 PDF anzeigen
-  return <PdfViewer fileUrl={fileUrl} documentName={documentName} customerName={customerName} />;
+  return <PdfViewer fileUrl={fileUrl} documentName={documentName} customerName={customerName} folderId={folderId} />;
 }

@@ -6,7 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useRouter } from 'next/router'; 
 
 // ✅ WICHTIGSTE ÄNDERUNG: customerName als Prop empfangen
-export default function PdfViewer({ fileUrl, documentName, customerName: propCustomerName }) {
+export default function PdfViewer({ fileUrl, documentName, customerName: propCustomerName, folderId }) {
   const router = useRouter(); 
   
   const [proxyUrl, setProxyUrl] = useState(null);
@@ -48,7 +48,8 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
             // ✅ WICHTIG: Hier verwenden wir den korrekten Namen aus der URL!
             customerName: finalCustomerName, 
             documentName: documentName,
-            role: 'customer'
+            role: 'customer',
+            folderId: folderId        
         };
 
         const res = await fetch('/api/signature/create', {
