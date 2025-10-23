@@ -6,41 +6,57 @@ import { supabase } from '../lib/supabaseClient'
 
 export default function SignPage() {
   const router = useRouter()
-  // 💡 KORREKTUR: Fragen Sie nur den 'token' ab. 'doc' und 'session' sind unnötig.
+  // Nur den 'token' abfragen
   const { token } = router.query 
   
   const sigPad = useRef(null)
   const [signed, setSigned] = useState(false)
-  // Speichern des Kunden- und Dokumentennamens aus dem Session-Verify-Call
   const [customerName, setCustomerName] = useState('') 
   const [documentName, setDocumentName] = useState('Dokument') 
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('Lade Session...')
 
-  // 🧭 Session und Kundennamen laden (VERBESSERT)
+  // 🧭 Session und Kundennamen laden (KORRIGIERT: Wartet auf router.isReady)
   useEffect(() => {
-    if (!token) {
-        setStatus('Warte auf Token...')
+    // 1. Warten, bis der Router die Query-Parameter geladen hat (Next.js-Standard)
+    if (!router.isReady) {
+        setStatus('Initialisiere...')
         return
     }
+    
+    // 2. Token direkt aus dem geladenen Router-Query holen
+    const currentToken = router.query.token;
+
+    if (!currentToken) {
+        setStatus('❌ Fehler: Signatur-Token fehlt in der URL.')
+        return
+    }
+    
+    // 3. Wenn der Token da ist, Status setzen und Verifizierung starten
+    setStatus('Starte Verifizierung...')
 
     const verifyToken = async () => {
-      // Nutze deinen verify-Endpunkt, um die Kundendaten sicher abzurufen
-      const res = await fetch(`/api/signature/verify?token=${token}`)
-      const data = await res.json()
+      try {
+        const res = await fetch(`/api/signature/verify?token=${currentToken}`)
+        const data = await res.json()
 
-      if (data.valid) {
-        setCustomerName(data.customerName)
-        setDocumentName(data.documentName)
-        setStatus('Bereit zur Unterschrift')
-      } else {
-        setStatus(`❌ Session Fehler: ${data.reason || 'Ungültig'}`)
+        if (data.valid) {
+          setCustomerName(data.customerName)
+          setDocumentName(data.documentName)
+          setStatus('Bereit zur Unterschrift')
+        } else {
+          setStatus(`❌ Session Fehler: ${data.reason || 'Ungültig'}. Bitte Link prüfen.`)
+        }
+      } catch (err) {
+          setStatus('❌ Serverfehler bei der Verifizierung.')
+          console.error("Verifizierungsfehler:", err);
       }
     }
     verifyToken()
 
-    // 🚨 ALTE LOGIK ENTFERNT: Der Kundenname wird jetzt aus der Datenbank-Session geholt.
-  }, [token]) // Wichtig: Neu laden, wenn Token verfügbar ist
+  // Abhängigkeiten: Führt den Effekt aus, sobald der Router bereit ist
+  // Wir nutzen hier router.isReady, da der Token sonst beim ersten Render undefined ist.
+  }, [router.isReady]) 
   
 
   // ✍️ Signatur speichern
@@ -49,24 +65,40 @@ export default function SignPage() {
       alert('Bitte unterschreibe zuerst!')
       return
     }
-
+    
+    // Token direkt aus router.query holen, da er im useEffect als verfügbar gesetzt wurde
+    const currentToken = router.query.token;
     const signatureBase64 = sigPad.current.toDataURL('image/png')
-    // 💡 KORREKTUR: Verwenden Sie die State-Variable 'token', die geladen wird
-    // const token = router.query.token <-- Wird durch die Closure/State-Variable abgedeckt
     
     setSaving(true)
     setStatus('⏳ Sende Signatur zur Verarbeitung...')
 
     try {
-      // HIER KEIN ZWEITER CHECK AUF TOKEN NÖTIG, WENN DER ERSTE useEffect ihn gesetzt hat.
-      if (!token) throw new Error('Signatur-Token fehlt oder Session ungültig.')
+      if (!currentToken) {
+         throw new Error('Signatur-Token fehlt oder Session ungültig.');
+      }
       
-      // ... [Der restliche Code ist jetzt korrekt, da er token direkt von router.query holt]
-      // ...
-      
-      // 1️⃣ Gerätedaten und Geo-Position abrufen (optional, aber gut für den Audit Trail)
-      // ... [Code zur Datenerfassung] ...
-      
+      // 1️⃣ Gerätedaten und Geo-Position abrufen (IMPLEMENTIERUNG HINZUGEFÜGT)
+      const userAgent = navigator.userAgent;
+      const screen = { width: window.screen.width, height: window.screen.height };
+      let geo = null;
+      try {
+          // Versuche, Geo-Daten abzurufen (kann fehlschlagen/abgelehnt werden)
+          geo = await new Promise((resolve) => {
+              if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                      (pos) => resolve({ coords: pos.coords }),
+                      () => resolve(null), // Fehler
+                      { timeout: 5000 } // Timeout
+                  );
+              } else {
+                  resolve(null);
+              }
+          });
+      } catch (e) {
+        console.warn("Geo-Location konnte nicht abgerufen werden:", e);
+      }
+
       // 2️⃣ Daten an den Backend-Endpunkt senden
       const submitRes = await fetch('/api/signature/submit', {
         method: 'POST',
@@ -74,7 +106,7 @@ export default function SignPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: token, // Hier wird der Token verwendet
+          token: currentToken, // HIER wird der Token verwendet
           signatureBase64: signatureBase64,
           userAgent: userAgent,
           screen: screen,
@@ -98,7 +130,6 @@ export default function SignPage() {
       setSaving(false)
     }
   }
-
 
 
   return (
