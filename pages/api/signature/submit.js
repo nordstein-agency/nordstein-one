@@ -1,7 +1,6 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT)
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT FÜR NEUE SPALTE document_name)
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-// getFileLinkByPath bleibt importiert, wird aber nicht mehr für den Download-Link verwendet.
 import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
 
@@ -45,26 +44,30 @@ export default async function handler(req, res) {
     console.log('Customer ID (Session):', customer_id);
     console.log('DocumentName (Session):', document_name); 
 
-    // 2) PDF-Template aus der Contracts-Tabelle holen (über customer_id und document_name)
+    // 2) PDF-Template aus der Contracts-Tabelle holen
     
-    // ✅ KORREKTUR: Nutzt customer_id, da contracts.customer_name nicht existiert.
+    // ✅ ULTIMATIVE KORREKTUR: Nutzt customer_id und die NEU HINZUGEFÜGTE Spalte document_name für eine EINDEUTIGE Suche.
     const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('pdf_url')
-        .eq('customer_id', customer_id) // Nutzt die UUID des Kunden
-        .eq('document_name', document_name) 
+        .eq('customer_id', customer_id) 
+        .eq('document_name', document_name) // ✅ NEUE, KORREKTE SPALTE WIRD VERWENDET
         .maybeSingle();
     
-    if (contractError || !contractData?.pdf_url) {
-        console.error("Datenbankfehler oder fehlender PDF-Link in DB:", contractError || "Link fehlt.");
-        console.error(`Suche in 'contracts' mit customer_id: ${customer_id} und document_name: ${document_name}`);
+    if (contractError) {
+        console.error("Datenbankfehler bei Suche:", contractError);
+        return res.status(500).json({ error: 'Database query failed for PDF link.' });
+    }
+    
+    if (!contractData?.pdf_url) {
+        console.error(`Link fehlt für customer_id: ${customer_id} und document: ${document_name}`);
         return res.status(404).json({ error: 'Original PDF download link not found in database.' });
     }
     
     const fileUrl = contractData.pdf_url; 
     console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
     
-    // Versuch, die Datei herunterzuladen (Sollte nun funktionieren, wenn der Link gültig ist)
+    // Versuch, die Datei herunterzuladen
     const fileResp = await fetch(fileUrl);
     
     if (!fileResp.ok) {
@@ -89,7 +92,7 @@ export default async function handler(req, res) {
     // Zeitstempel + Geräteinfos
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const ts = new Date();
-    const UAParser = require('ua-parser-js'); // UAParser FIX
+    const UAParser = require('ua-parser-js'); 
     const parser = new UAParser(userAgent || '');
     const ua = parser.getResult();
     const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';

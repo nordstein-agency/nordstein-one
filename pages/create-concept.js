@@ -155,6 +155,7 @@ const handleCreate = async () => {
           user_id: customer.user_id,
           state: 'Antrag',
           pdf_url: fileUrlFinal, // 👈 Jetzt den direkten, finalen Link speichern
+          document_name: fullDocumentName,
         },
       ])
       .select('id')
