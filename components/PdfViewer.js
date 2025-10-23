@@ -1,12 +1,21 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react'; // ✅ Richtiger Import für Next.js
+import { QRCodeCanvas } from 'qrcode.react'; 
+// Importieren Sie useRouter, um bei Bedarf auf Router-Informationen zuzugreifen (optional, aber gut für Konsistenz)
+import { useRouter } from 'next/router'; 
 
 export default function PdfViewer({ fileUrl, documentName }) {
+  const router = useRouter(); // Kann nützlich sein, um Kundendaten aus der URL zu holen
+  
   const [proxyUrl, setProxyUrl] = useState(null);
   const [editing, setEditing] = useState(false);
   const [signatureMode, setSignatureMode] = useState(false);
   const [signatureQr, setSignatureQr] = useState(null);
+  const [loadingQr, setLoadingQr] = useState(false);
+  
+  // 💡 NEU: Statische/bekannte Kundendaten für den API-Aufruf (Muss von irgendwo kommen)
+  const customerId = 'KUNDE_123'; // Beispielwert
+  const customerName = 'Max Mustermann'; // Beispielwert
 
   useEffect(() => {
     if (fileUrl) {
@@ -23,13 +32,43 @@ export default function PdfViewer({ fileUrl, documentName }) {
     alert('📝 (Demo) Textfeld hinzugefügt – hier später frei positionierbar.');
   };
 
-  const handleAddSignature = () => {
-    const signatureLink = `${window.location.origin}/sign?doc=${encodeURIComponent(
-      documentName
-    )}&session=${Date.now()}`;
+  // ✍️ KORRIGIERT: Ruft die API auf, um den Token-Link abzurufen
+  const handleAddSignature = async () => {
+    setLoadingQr(true);
+    setSignatureQr(null); // Alten QR-Code löschen
 
-    setSignatureQr(signatureLink);
-    setSignatureMode(true);
+    try {
+        // Daten für die API-Route vorbereiten
+        const signatureData = {
+            customerId: customerId, // Muss im echten Code dynamisch sein
+            customerName: customerName, // Muss im echten Code dynamisch sein
+            documentName: documentName,
+            folderId: 'FOLDER_ABC', // Muss im echten Code dynamisch sein
+            role: 'customer' // Rolle für die Signatur
+        };
+
+        // API-Aufruf an den Token-Generator
+        const res = await fetch('/api/signature/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(signatureData)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.qrUrl) {
+            // ✅ Erfolgreich: API gibt den Link mit ?token=... zurück
+            setSignatureQr(data.qrUrl); 
+            setSignatureMode(true);
+        } else {
+            alert(`❌ Fehler beim Erstellen des Signatur-Tokens: ${data.error || 'Unbekannter Fehler'}`);
+        }
+    } catch (error) {
+        console.error('Fehler bei Signatur-API:', error);
+        alert('Fehler beim Kommunizieren mit dem Server.');
+    } finally {
+        setLoadingQr(false);
+    }
   };
 
   const handleSaveAndClose = () => {
@@ -62,9 +101,10 @@ export default function PdfViewer({ fileUrl, documentName }) {
 
             <button
               onClick={handleAddSignature}
+              disabled={loadingQr} // Deaktivieren, während der Link generiert wird
               className="bg-[#007bff] text-white px-4 py-2"
             >
-              Signaturfeld hinzufügen
+              {loadingQr ? 'Link generieren...' : 'Signaturfeld hinzufügen'}
             </button>
 
             <button
@@ -89,14 +129,14 @@ export default function PdfViewer({ fileUrl, documentName }) {
       </div>
 
       {/* Signatur QR-Code Modal */}
-      {signatureMode && (
+      {signatureMode && signatureQr && ( // Zeige nur, wenn ein Link vorhanden ist
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded shadow-lg text-center">
             <h2 className="text-lg font-bold mb-2">📱 QR-Code für Signatur</h2>
             <p className="mb-4 text-sm text-gray-600">
               Scanne den QR-Code mit deinem Smartphone, um das Dokument zu unterschreiben.
             </p>
-            <QRCodeCanvas value={signatureQr} size={200} /> {/* ✅ Richtig */}
+            <QRCodeCanvas value={signatureQr} size={200} />
             <div className="mt-4">
               <button
                 onClick={() => setSignatureMode(false)}
@@ -107,6 +147,13 @@ export default function PdfViewer({ fileUrl, documentName }) {
             </div>
           </div>
         </div>
+      )}
+      {signatureMode && loadingQr && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="bg-white p-6 rounded shadow-lg text-center">
+                  <p>Generiere Signatur-Link...</p>
+              </div>
+          </div>
       )}
     </div>
   );
