@@ -1,7 +1,7 @@
 // /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT)
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-// getFileLinkByPath wird nicht mehr für den Download, aber für Kompatibilität importiert
+// getFileLinkByPath bleibt importiert, wird aber nicht mehr für den Download-Link verwendet.
 import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
 
@@ -40,35 +40,35 @@ export default async function handler(req, res) {
 
     const { role, customer_id, customer_name, document_name, folder_id } = session;
 
-
+    // 🛑 DEBUGGING-ZEILEN
     console.log('DB-Suche gestartet für...');
-    console.log('CustomerName (Session):', customer_name);
-    console.log('DocumentName (Session):', document_name);
+    console.log('Customer ID (Session):', customer_id);
+    console.log('DocumentName (Session):', document_name); 
 
-    // 2) PDF-Template aus der Contracts-Tabelle holen
+    // 2) PDF-Template aus der Contracts-Tabelle holen (über customer_id und document_name)
     
-    // ✅ FIX: Download-Link aus der Contracts-Tabelle holen
+    // ✅ KORREKTUR: Nutzt customer_id, da contracts.customer_name nicht existiert.
     const { data: contractData, error: contractError } = await supabase
-        .from('contracts') // Hier muss der Name Ihrer Tabelle stehen, in der die PDF-URL gespeichert ist.
+        .from('contracts')
         .select('pdf_url')
-        .eq('customer_name', customer_name) // Abgleich anhand des Kundennamens
-        .eq('document_name', document_name) // Abgleich anhand des Dokumentennamens
+        .eq('customer_id', customer_id) // Nutzt die UUID des Kunden
+        .eq('document_name', document_name) 
         .maybeSingle();
     
     if (contractError || !contractData?.pdf_url) {
-        console.error("Datenbankfehler oder fehlender PDF-Link in DB:", contractError);
+        console.error("Datenbankfehler oder fehlender PDF-Link in DB:", contractError || "Link fehlt.");
+        console.error(`Suche in 'contracts' mit customer_id: ${customer_id} und document_name: ${document_name}`);
         return res.status(404).json({ error: 'Original PDF download link not found in database.' });
     }
     
     const fileUrl = contractData.pdf_url; 
     console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
     
-    // Versuch, die Datei herunterzuladen (hier tritt der SocketError auf, 
-    // muss nun wegen Gültigkeit des Links behoben sein)
+    // Versuch, die Datei herunterzuladen (Sollte nun funktionieren, wenn der Link gültig ist)
     const fileResp = await fetch(fileUrl);
     
     if (!fileResp.ok) {
-        // Dieser Fehler deutet darauf hin, dass der Link abgelaufen oder ungültig ist.
+        // Fangt den SocketError ab, der durch einen abgelaufenen/ungültigen pCloud-Link entsteht.
         console.error(`❌ Download failed, Link abgelaufen/ungültig: ${fileResp.status} ${fileResp.statusText}`);
         return res.status(500).json({ error: 'Failed to download PDF template (Link expired/invalid).' });
     }
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
     // Zeitstempel + Geräteinfos
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const ts = new Date();
-    const UAParser = require('ua-parser-js'); // ✅ UAParser FIX beibehalten
+    const UAParser = require('ua-parser-js'); // UAParser FIX
     const parser = new UAParser(userAgent || '');
     const ua = parser.getResult();
     const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
 
     // 6) Neue Datei hochladen
     const uploaded = await uploadFileBuffer({
-      folderId: folderIdForPcloud, // ✅ FIX: Numerische ID verwenden
+      folderId: folderIdForPcloud, // Numerische ID verwenden
       filename: signedName,
       buffer: Buffer.from(finalBytes),
       accessToken
