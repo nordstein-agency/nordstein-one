@@ -6,6 +6,7 @@ import { sha256 } from '../../../lib/hash';
 import UAParser from 'ua-parser-js';
 
 async function getAccessToken() {
+  // hol den neuesten pCloud-Token aus deiner Tabelle (du hast das schon genutzt)
   const { data } = await supabase
     .from('pcloud_tokens')
     .select('access_token')
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // 1. KORREKTUR: Entferne JSON.parse (req.body ist bereits ein Objekt)
+    // KORREKTUR 1: req.body ist in Next.js bereits ein Objekt, JSON.parse muss entfernt werden.
     const body = req.body || {}; 
     const { token, signatureBase64, userAgent, screen, geo } = body;
     if (!token || !signatureBase64) return res.status(400).json({ error: 'Missing token or signature' });
@@ -39,11 +40,20 @@ export default async function handler(req, res) {
 
     const { role, customer_id, customer_name, document_name, folder_id } = session;
 
-    // 2) PDF-Template aus pCloud holen
-    const path = `/customers/${customer_name}/${document_name}`;
+    // 2) PDF-Template aus pCloud holen (Pfad: /customers/<Name>/<DocName>)
+    
+    // KORREKTUR 2: URI-Kodierung der einzelnen Pfadkomponenten, um Pfadprobleme (z.B. durch Sonderzeichen) zu beheben.
+    const safeCustomerName = encodeURIComponent(customer_name);
+    const safeDocumentName = encodeURIComponent(document_name);
+    const path = `/customers/${safeCustomerName}/${safeDocumentName}`; 
+    
     const fileUrl = await getFileLinkByPath({ path, accessToken });
     const fileResp = await fetch(fileUrl);
-    if (!fileResp.ok) return res.status(400).json({ error: 'Download failed' });
+    
+    if (!fileResp.ok) {
+        console.error(`pCloud Download failed: Check existence of path: ${path}`);
+        return res.status(400).json({ error: 'Download failed' });
+    }
     const templateBytes = new Uint8Array(await fileResp.arrayBuffer());
 
     // 3) PDF bearbeiten: Unterschrift + Zeitstempel + Gerätedaten
@@ -54,6 +64,7 @@ export default async function handler(req, res) {
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
+    // Position der Signatur (einfache Position unten links)
     const x = 50, y = 120;
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
@@ -88,8 +99,10 @@ export default async function handler(req, res) {
     // await deleteFileByPath({ path, accessToken });
 
     // 6) Neue Datei hochladen
+    // HINWEIS: Hier wird die folder_id verwendet, die aus der Session kommt. 
+    // Wenn in der Session NULL steht, wird der Upload fehlschlagen!
     const uploaded = await uploadFileBuffer({
-      folderId: folder_id,
+      folderId: folder_id, // ACHTUNG: MUSS eine gültige Zahl sein!
       filename: signedName,
       buffer: Buffer.from(finalBytes),
       accessToken
@@ -110,13 +123,10 @@ export default async function handler(req, res) {
     const { error: sigErr } = await supabase.from(table).insert({
       customer_id,
       document_name: signedName,
-      // 2. KORREKTUR (Rückgängig gemacht): Verwendung des korrekten Spaltennamens 'pcloud_file_id'
-      pcloud_file_id: fileId, 
-      // 3. KORREKTUR: Verwendung des korrekten Spaltennamens 'hash' aus Ihrem Schema
-      hash: finalHash, 
+      pcloud_file_id: fileId, // Bestätigte Spaltenname
+      hash: finalHash, // Korrekter Spaltenname
       device_info,
-      // 4. KORREKTUR: signed_at hinzufügen, da es nullable ist und keinen DB-Default hat
-      signed_at: new Date().toISOString() 
+      signed_at: new Date().toISOString() // KORREKTUR 3: signed_at hinzufügen
     });
     
     if (sigErr) {
