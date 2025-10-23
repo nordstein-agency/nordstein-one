@@ -17,24 +17,26 @@ export default function SignPage() {
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('Lade Initialdaten...') 
 
-  // 🧭 Session und Kundennamen laden (KORRIGIERT: Wartet auf router.isReady)
+  // sign.js (KORRIGIERTER useEffect)
+
+  // 🧭 Session und Kundennamen laden (Robusteste Lösung)
   useEffect(() => {
     // 1. Warten, bis der Router die Query-Parameter geladen hat.
     if (!router.isReady) {
-        setStatus('Initialisiere...')
+        setStatus('Initialisiere Router...')
         return
     }
     
-    // 2. Token JETZT (nach isReady) sicher auslesen
+    // Router ist bereit. Nun den aktuellen Token sicher auslesen.
     const currentToken = router.query.token;
 
     if (!currentToken) {
-        // Jetzt ist die URL geladen, und wir wissen, dass der Token fehlt.
-        setStatus('❌ Fehler: Signatur-Token fehlt in der URL.')
+        // Jetzt wissen wir sicher, dass der Token in der geladenen URL fehlt.
+        setStatus('❌ Fehler: Signatur-Token fehlt in der URL. (URL ungültig)')
         return
     }
     
-    // 3. Wenn der Token da ist, Verifizierung starten
+    // Token ist da
     setStatus('Starte Verifizierung...')
 
     const verifyToken = async () => {
@@ -47,16 +49,18 @@ export default function SignPage() {
           setDocumentName(data.documentName)
           setStatus('Bereit zur Unterschrift')
         } else {
-          setStatus(`❌ Session Fehler: ${data.reason || 'Ungültig'}. Bitte Link prüfen.`)
+          setStatus(`❌ Session Fehler: ${data.reason || 'Ungültig'}.`)
         }
       } catch (err) {
-          setStatus('❌ Serverfehler bei der Verifizierung.')
+          setStatus('❌ Schwerer Serverfehler bei der Verifizierung.')
           console.error("Verifizierungsfehler:", err);
       }
     }
     verifyToken()
 
-  }, [router.isReady]) 
+  // 💡 KORRIGIERTE ABHÄNGIGKEIT: Nur router.isReady. 
+  // Das verhindert unnötige Rerender und stellt sicher, dass wir nach dem ersten Laden arbeiten.
+  }, [router.isReady])
   
 
   // ✍️ Signatur speichern
