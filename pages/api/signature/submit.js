@@ -1,12 +1,12 @@
-// pages/api/signature/submit.js
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT)
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud';
+// getFileLinkByPath wird nicht mehr für den Download, aber für Kompatibilität importiert
+import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
-//import UAParser from 'ua-parser-js';
 
 async function getAccessToken() {
-  // hol den neuesten pCloud-Token aus deiner Tabelle (du hast das schon genutzt)
+  // hol den neuesten pCloud-Token aus deiner Tabelle
   const { data } = await supabase
     .from('pcloud_tokens')
     .select('access_token')
@@ -20,18 +20,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // KORREKTUR 1: req.body ist in Next.js bereits ein Objekt, JSON.parse muss entfernt werden.
     const body = req.body || {}; 
     const { token, signatureBase64, userAgent, screen, geo } = body;
     if (!token || !signatureBase64) return res.status(400).json({ error: 'Missing token or signature' });
 
     // 1) Session prüfen
-    const { data: session, error } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('signature_sessions')
       .select('*')
       .eq('token', token)
       .maybeSingle();
-    if (error || !session) return res.status(404).json({ error: 'Session not found' });
+    
+    if (sessionError || !session) return res.status(404).json({ error: 'Session not found' });
     if (session.used) return res.status(400).json({ error: 'Token already used' });
     if (new Date(session.expires_at) < new Date()) return res.status(400).json({ error: 'Token expired' });
 
@@ -40,19 +40,32 @@ export default async function handler(req, res) {
 
     const { role, customer_id, customer_name, document_name, folder_id } = session;
 
-    // 2) PDF-Template aus pCloud holen (Pfad: /customers/<Name>/<DocName>)
+    // 2) PDF-Template aus der Contracts-Tabelle holen
     
-    // KORREKTUR 2: URI-Kodierung der einzelnen Pfadkomponenten, um Pfadprobleme (z.B. durch Sonderzeichen) zu beheben.
-    const safeCustomerName = encodeURIComponent(customer_name);
-    const safeDocumentName = encodeURIComponent(document_name);
-    const path = `/customers/${safeCustomerName}/${safeDocumentName}`; 
+    // ✅ FIX: Download-Link aus der Contracts-Tabelle holen
+    const { data: contractData, error: contractError } = await supabase
+        .from('contracts') // Hier muss der Name Ihrer Tabelle stehen, in der die PDF-URL gespeichert ist.
+        .select('pdf_url')
+        .eq('customer_name', customer_name) // Abgleich anhand des Kundennamens
+        .eq('document_name', document_name) // Abgleich anhand des Dokumentennamens
+        .maybeSingle();
     
-    const fileUrl = await getFileLinkByPath({ path, accessToken });
+    if (contractError || !contractData?.pdf_url) {
+        console.error("Datenbankfehler oder fehlender PDF-Link in DB:", contractError);
+        return res.status(404).json({ error: 'Original PDF download link not found in database.' });
+    }
+    
+    const fileUrl = contractData.pdf_url; 
+    console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
+    
+    // Versuch, die Datei herunterzuladen (hier tritt der SocketError auf, 
+    // muss nun wegen Gültigkeit des Links behoben sein)
     const fileResp = await fetch(fileUrl);
     
     if (!fileResp.ok) {
-        console.error(`pCloud Download failed: Check existence of path: ${path}`);
-        return res.status(400).json({ error: 'Download failed' });
+        // Dieser Fehler deutet darauf hin, dass der Link abgelaufen oder ungültig ist.
+        console.error(`❌ Download failed, Link abgelaufen/ungültig: ${fileResp.status} ${fileResp.statusText}`);
+        return res.status(500).json({ error: 'Failed to download PDF template (Link expired/invalid).' });
     }
     const templateBytes = new Uint8Array(await fileResp.arrayBuffer());
 
@@ -71,7 +84,7 @@ export default async function handler(req, res) {
     // Zeitstempel + Geräteinfos
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const ts = new Date();
-    const UAParser = require('ua-parser-js');
+    const UAParser = require('ua-parser-js'); // ✅ UAParser FIX beibehalten
     const parser = new UAParser(userAgent || '');
     const ua = parser.getResult();
     const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
@@ -97,16 +110,20 @@ export default async function handler(req, res) {
         : `${document_name}${signedSuffix}.pdf`;
 
     // 5) Alte Datei optional löschen (Template)
-    // await deleteFileByPath({ path, accessToken });
+    // const safePath = `/${encodeURIComponent(customer_name)}/${document_name}`;
+    // await deleteFileByPath({ path: safePath, accessToken });
 
+    // ✅ FIX: folder_id auf Gültigkeit prüfen und in Zahl konvertieren
+    const folderIdForPcloud = folder_id ? Number(folder_id) : null; 
 
-    const numericFolderId = Number(folder_id);
+    if (!folderIdForPcloud || isNaN(folderIdForPcloud)) {
+        console.error("Missing or invalid folderId for pCloud upload:", folder_id);
+        return res.status(400).json({ error: 'Missing or invalid pCloud folder ID for upload.' });
+    }
 
     // 6) Neue Datei hochladen
-    // HINWEIS: Hier wird die folder_id verwendet, die aus der Session kommt. 
-    // Wenn in der Session NULL steht, wird der Upload fehlschlagen!
     const uploaded = await uploadFileBuffer({
-      folderId: numericFolderId, // ACHTUNG: MUSS eine gültige Zahl sein!
+      folderId: folderIdForPcloud, // ✅ FIX: Numerische ID verwenden
       filename: signedName,
       buffer: Buffer.from(finalBytes),
       accessToken
@@ -127,10 +144,10 @@ export default async function handler(req, res) {
     const { error: sigErr } = await supabase.from(table).insert({
       customer_id,
       document_name: signedName,
-      pcloud_file_id: fileId, // Bestätigte Spaltenname
-      hash: finalHash, // Korrekter Spaltenname
+      pcloud_file_id: fileId,
+      hash: finalHash,
       device_info,
-      signed_at: new Date().toISOString() // KORREKTUR 3: signed_at hinzufügen
+      signed_at: new Date().toISOString()
     });
     
     if (sigErr) {
