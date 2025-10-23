@@ -102,7 +102,7 @@ const handleCreate = async () => {
       console.error('❌ Ungültige Upload-Response:', uploadResult)
       return
     }
-
+const fullDocumentName = uploadedFile + '.pdf';
     console.log('📂 Datei-Infos:', { uploadedFile, fileId, folderId })
 
     // 2️⃣ Öffentlichen Link erzeugen und direkten Download-Link holen
@@ -130,7 +130,7 @@ const handleCreate = async () => {
         
         // 💡 KORREKTUR START 💡
         const directDownloadUrl = publinkData.final_url; // Der direkte Link von getpublinkdownload
-        const fullDocumentName = uploadedFile + '.pdf';
+        
         
         // Fügen Sie den 'forcename'-Parameter zur finalen URL hinzu, um den korrekten 
         // Dateinamen und Content-Type im Browser zu erzwingen und die PDF lesbar zu machen.
