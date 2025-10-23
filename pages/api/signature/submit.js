@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT DIRECT FORM DATA UPLOAD)
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT DIRECT FORM DATA UPLOAD UND SKALIERUNG)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     if (!PCLOUD_API_URL) return res.status(500).json({ error: 'PCLOUD_API_URL not set' });
 
 
-    const { role, customer_id, customer_name, document_name, folder_id, signature_position } = session; // signature_position hinzugefügt
+    const { role, customer_id, customer_name, document_name, folder_id, signature_position } = session; 
     
     // 🛑 DEBUGGING-ZEILEN
     console.log('DB-Suche gestartet für...');
@@ -95,13 +95,28 @@ export default async function handler(req, res) {
     const pageIndex = Math.max(0, sigPageNumber - 1); // 0-basierter Index
     const page = pdfDoc.getPage(pageIndex);
     
+    // 🛑 NEU: Abrufen der tatsächlichen PDF-Abmessungen der Seite
+    const { width: pageWidth, height: pageHeight } = page.getSize();
+    // 🛑 NEU: Der Bezugspunkt des Viewers (muss mit IFRAME_HEIGHT übereinstimmen)
+    const viewerPixelHeight = 900; 
+
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ DYNAMISCHE POSITION VERWENDEN
-    const x = signature_position?.x || 50; 
-    const y = signature_position?.y || 120;
+    // ✅ SKALIERUNG DER POSITION HINZUFÜGEN
+    const rawX = signature_position?.x || 50; 
+    const rawY = signature_position?.y || 120; // Rohwert aus dem Frontend (Pixel von unten)
+    
+    // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
+    const x = (rawX / viewerPixelHeight) * pageWidth; 
+    
+    // 2. Skalierung der Y-Achse: Pixel zu PDF-Punkte. Die Signatur_Position ist BEREITS von unten gespiegelt.
+    const y = (rawY / viewerPixelHeight) * pageHeight;
+    
+    // 🛑 DEBUGGING: Skalierte Werte protokollieren (optional, aber hilfreich)
+    console.log(`[SIGNATURE POS SCALED] Raw X/Y: ${rawX}/${rawY}. Scaled X/Y: ${x.toFixed(2)}/${y.toFixed(2)}`);
+
     
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
@@ -122,6 +137,7 @@ export default async function handler(req, res) {
     ].filter(Boolean).join('  •  ');
     
     // Zeitstempel unter der Signatur (dynamische Y-Koordinate)
+    // ✅ VERWENDET DEN SKALIERTEN y-Wert
     const infoTextY = y - 30; 
     page.drawText(infoText, { x: x, y: infoTextY, size: 9, color: rgb(0.2, 0.2, 0.2), font });
 
