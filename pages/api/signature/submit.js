@@ -1,8 +1,14 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT FÜR NEUE SPALTE document_name)
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT DIRECT FORM DATA UPLOAD)
+
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
+// ⚠️ DEAKTIVIERT: Wir verwenden den funktionierenden FormData-Code direkt
+// import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
+
+// ✅ NEUE IMPORTS FÜR DEN FORM-DATA UPLOAD
+import fetch from "node-fetch";
+import FormData from "form-data"; 
 
 async function getAccessToken() {
   // hol den neuesten pCloud-Token aus deiner Tabelle
@@ -36,22 +42,27 @@ export default async function handler(req, res) {
 
     const accessToken = await getAccessToken();
     if (!accessToken) return res.status(500).json({ error: 'No pCloud token available' });
+    
+    // 💡 HINWEIS: Wir brauchen den accessToken auch für den upload!
+    const PCLOUD_API_URL = process.env.PCLOUD_API_URL;
+    if (!PCLOUD_API_URL) return res.status(500).json({ error: 'PCLOUD_API_URL not set' });
 
-    const { role, customer_id, customer_name, document_name, folder_id } = session;
 
+    const { role, customer_id, customer_name, document_name, folder_id, signature_position } = session; // signature_position hinzugefügt
+    
     // 🛑 DEBUGGING-ZEILEN
     console.log('DB-Suche gestartet für...');
     console.log('Customer ID (Session):', customer_id);
     console.log('DocumentName (Session):', document_name); 
+    console.log('Signature Position (Session):', signature_position); 
 
     // 2) PDF-Template aus der Contracts-Tabelle holen
     
-    // ✅ ULTIMATIVE KORREKTUR: Nutzt customer_id und die NEU HINZUGEFÜGTE Spalte document_name für eine EINDEUTIGE Suche.
     const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('pdf_url')
         .eq('customer_id', customer_id) 
-        .eq('document_name', document_name) // ✅ NEUE, KORREKTE SPALTE WIRD VERWENDET
+        .eq('document_name', document_name)
         .maybeSingle();
     
     if (contractError) {
@@ -71,7 +82,6 @@ export default async function handler(req, res) {
     const fileResp = await fetch(fileUrl);
     
     if (!fileResp.ok) {
-        // Fangt den SocketError ab, der durch einen abgelaufenen/ungültigen pCloud-Link entsteht.
         console.error(`❌ Download failed, Link abgelaufen/ungültig: ${fileResp.status} ${fileResp.statusText}`);
         return res.status(500).json({ error: 'Failed to download PDF template (Link expired/invalid).' });
     }
@@ -79,14 +89,20 @@ export default async function handler(req, res) {
 
     // 3) PDF bearbeiten: Unterschrift + Zeitstempel + Gerätedaten
     const pdfDoc = await PDFDocument.load(templateBytes);
-    const page = pdfDoc.getPage(0);
+    
+    // 💡 Dynamische Positionierung
+    const sigPageNumber = signature_position?.page || 1; 
+    const pageIndex = Math.max(0, sigPageNumber - 1); // 0-basierter Index
+    const page = pdfDoc.getPage(pageIndex);
     
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // Position der Signatur (einfache Position unten links)
-    const x = 50, y = 120;
+    // ✅ DYNAMISCHE POSITION VERWENDEN
+    const x = signature_position?.x || 50; 
+    const y = signature_position?.y || 120;
+    
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
     // Zeitstempel + Geräteinfos
@@ -104,8 +120,11 @@ export default async function handler(req, res) {
       `IP: ${ip}`,
       geo?.coords ? `Geo: ${geo.coords.latitude.toFixed(5)}, ${geo.coords.longitude.toFixed(5)}` : null
     ].filter(Boolean).join('  •  ');
+    
+    // Zeitstempel unter der Signatur (dynamische Y-Koordinate)
+    const infoTextY = y - 30; 
+    page.drawText(infoText, { x: x, y: infoTextY, size: 9, color: rgb(0.2, 0.2, 0.2), font });
 
-    page.drawText(infoText, { x: 50, y: 90, size: 9, color: rgb(0.2, 0.2, 0.2), font });
 
     const finalBytes = await pdfDoc.save();
     const finalHash = await sha256(finalBytes);
@@ -117,27 +136,38 @@ export default async function handler(req, res) {
         ? document_name.replace(/\.pdf$/i, `${signedSuffix}.pdf`)
         : `${document_name}${signedSuffix}.pdf`;
 
-    // 5) Alte Datei optional löschen (Template)
-    // const safePath = `/${encodeURIComponent(customer_name)}/${document_name}`;
-    // await deleteFileByPath({ path: safePath, accessToken });
-
-    // ✅ FIX: folder_id auf Gültigkeit prüfen und in Zahl konvertieren
+    // 5) Alte Datei optional löschen (wird hier ignoriert)
+    
+    // 6) Neue Datei hochladen (KORRIGIERT MIT FORM-DATA)
     const folderIdForPcloud = folder_id ? Number(folder_id) : null; 
 
     if (!folderIdForPcloud || isNaN(folderIdForPcloud)) {
         console.error("Missing or invalid folderId for pCloud upload:", folder_id);
         return res.status(400).json({ error: 'Missing or invalid pCloud folder ID for upload.' });
     }
+    
+    // ✅ NEUER UPLOAD-MECHANISMUS (Funktioniert wie in add-customer-docs.js)
+    const form = new FormData();
+    form.append("file", Buffer.from(finalBytes), signedName); 
 
-    // 6) Neue Datei hochladen
-    const uploaded = await uploadFileBuffer({
-      folderId: folderIdForPcloud, // Numerische ID verwenden
-      filename: signedName,
-      buffer: Buffer.from(finalBytes),
-      accessToken
+    const uploadUrl = `${PCLOUD_API_URL}/uploadfile?folderid=${folderIdForPcloud}&access_token=${accessToken}`;
+    
+    const uploadResp = await fetch(uploadUrl, {
+      method: "POST",
+      body: form,
     });
 
-    const fileId = uploaded?.fileid ? Number(uploaded.fileid) : null;
+    const uploaded = await uploadResp.json();
+    // ----------------------------------------------------------------------
+
+    // 🛑 EXAKTE FEHLERPRÜFUNG:
+    if (!uploaded || uploaded.result !== 0) {
+        console.error('❌ PCloud UPLOAD FAILED! Reason:', uploaded); 
+        console.error('File was NOT saved:', signedName);
+        return res.status(500).json({ error: 'Failed to upload signed PDF to pCloud.' });
+    }
+
+    const fileId = uploaded.metadata?.[0]?.fileid ? Number(uploaded.metadata[0].fileid) : null; // Zugriff angepasst
 
     // 7) Signatur in passender Tabelle speichern
     const device_info = {
