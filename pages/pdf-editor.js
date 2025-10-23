@@ -85,5 +85,5 @@ export default function PdfEditor() {
     );
 
   // 📄 PDF anzeigen
-  return <PdfViewer fileUrl={fileUrl} documentName={documentName} />;
+  return <PdfViewer fileUrl={fileUrl} documentName={documentName} customerName={customerName} />;
 }

@@ -1,9 +1,12 @@
+// /components/PdfViewer.js (VOLLSTÄNDIG KORRIGIERTE VERSION)
+
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // useRef hinzugefügt
 import { QRCodeCanvas } from 'qrcode.react'; 
 import { useRouter } from 'next/router'; 
 
-export default function PdfViewer({ fileUrl, documentName }) {
+// ✅ WICHTIGSTE ÄNDERUNG: customerName als Prop empfangen
+export default function PdfViewer({ fileUrl, documentName, customerName: propCustomerName }) {
   const router = useRouter(); 
   
   const [proxyUrl, setProxyUrl] = useState(null);
@@ -12,9 +15,12 @@ export default function PdfViewer({ fileUrl, documentName }) {
   const [signatureQr, setSignatureQr] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
   
-  // 💡 HINWEIS: customerName MUSS dynamisch von der aufrufenden Seite kommen
-  // Hier wird ein Platzhalter verwendet
-  const customerName = 'Max Mustermann'; 
+  // Ref für die Signatur (wird in handleSaveSignature benötigt)
+  const sigPad = useRef(null); 
+  
+  // 💡 FIX: Den Kundennamen aus der Prop verwenden, die von der URL kam.
+  // Wenn der Name fehlt, verwenden wir einen sicheren Fallback.
+  const finalCustomerName = propCustomerName || 'UnbekannterKunde'; 
 
   useEffect(() => {
     if (fileUrl) {
@@ -31,7 +37,7 @@ export default function PdfViewer({ fileUrl, documentName }) {
     alert('📝 (Demo) Textfeld hinzugefügt – hier später frei positionierbar.');
   };
 
-  // ✍️ KORRIGIERT: Ruft die API auf, um den Token-Link abzurufen
+  // ✍️ API-Aufruf, um den Token-Link abzurufen
   const handleAddSignature = async () => {
     setLoadingQr(true);
     setSignatureQr(null); 
@@ -39,23 +45,12 @@ export default function PdfViewer({ fileUrl, documentName }) {
     try {
         // Daten für die API-Route vorbereiten
         const signatureData = {
-            // 💡 KORREKTUR: customerId (UUID) und folderId (int8) entfernt, 
-            // da sie als ungültige Strings gesendet wurden und nullable sind.
-            // Im echten Code müssten hier dynamische, gültige UUIDs/Zahlen stehen.
-            
-            // customerId: 'KUNDE_123', // <--- Entfernt, da ungültiger Typ
-            // folderId: 'FOLDER_ABC', // <--- Entfernt, da ungültiger Typ
-            
-            customerName: customerName, 
+            // ✅ WICHTIG: Hier verwenden wir den korrekten Namen aus der URL!
+            customerName: finalCustomerName, 
             documentName: documentName,
-            // Im echten Code muss folderId (int8) und customerId (uuid) bei Bedarf hinzugefügt werden
-            role: 'customer' // Rolle für die Signatur (Muss aus dem Frontend kommen)
+            role: 'customer'
         };
-        
-        // Die API benötigt documentName, customerName und role, die hier gesendet werden.
-        // customerId und folderId werden jetzt als NULL in Supabase eingefügt.
 
-        // API-Aufruf an den Token-Generator
         const res = await fetch('/api/signature/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -87,6 +82,11 @@ export default function PdfViewer({ fileUrl, documentName }) {
       <h1 className="text-2xl font-bold text-[#451a3d] mb-4">
         PDF-Editor: {documentName}
       </h1>
+
+      <p className="mb-6 text-[#6b3c67]">
+        {/* Hier zeigen wir den Namen an, der von der URL kam (decodiert) */}
+        Kunde: <strong>{decodeURIComponent(finalCustomerName) || '-'}</strong> | Dokument: <strong>{documentName || '-'}</strong>
+      </p>
 
       {/* Toolbar */}
       <div className="flex gap-4 mb-4">
