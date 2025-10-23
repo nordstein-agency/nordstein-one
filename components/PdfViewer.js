@@ -1,26 +1,23 @@
-// /components/PdfViewer.js (VOLLSTÄNDIG KORRIGIERTE VERSION)
+// /components/PdfViewer.js (VOLLSTÄNDIG KORRIGIERT FÜR DYNAMISCHE POSITION & RELOAD FIX)
 
 'use client';
-import { useEffect, useState, useRef } from 'react'; // useRef hinzugefügt
-import { QRCodeCanvas } from 'qrcode.react'; 
-import { useRouter } from 'next/router'; 
+import { useEffect, useState, useRef } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { useRouter } from 'next/router';
 
-// ✅ WICHTIGSTE ÄNDERUNG: customerName als Prop empfangen
-export default function PdfViewer({ fileUrl, documentName, customerName: propCustomerName, folderId, customerId }) {
-  const router = useRouter(); 
-  
+export default function PdfViewer({ fileUrl, documentName, customerName: propCustomerName, folderId, customerId, onSignatureClose }) {
+  const router = useRouter();
+
   const [proxyUrl, setProxyUrl] = useState(null);
   const [editing, setEditing] = useState(false);
   const [signatureMode, setSignatureMode] = useState(false);
   const [signatureQr, setSignatureQr] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
   
-  // Ref für die Signatur (wird in handleSaveSignature benötigt)
-  const sigPad = useRef(null); 
-  
-  // 💡 FIX: Den Kundennamen aus der Prop verwenden, die von der URL kam.
-  // Wenn der Name fehlt, verwenden wir einen sicheren Fallback.
-  const finalCustomerName = propCustomerName || 'UnbekannterKunde'; 
+  // ✅ NEU: State für die Signaturposition (wird hier simuliert)
+  const [sigPosition, setSigPosition] = useState(null); 
+
+  const finalCustomerName = propCustomerName || 'UnbekannterKunde';
 
   useEffect(() => {
     if (fileUrl) {
@@ -37,20 +34,37 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
     alert('📝 (Demo) Textfeld hinzugefügt – hier später frei positionierbar.');
   };
 
+  // 💡 NEUE FUNKTION: Simuliert das Setzen der Position (später mit Klick-Logik ersetzen)
+  const handlePlaceSignature = () => {
+      // Setzt eine feste Testposition auf Seite 1. 
+      // Diese Werte müssen in der finalen Lösung durch tatsächliche Klick-Koordinaten ersetzt werden.
+      const newPos = { x: 450, y: 180, page: 1 }; 
+      setSigPosition(newPos);
+      alert(`✅ Signaturposition gesetzt bei: X=${newPos.x}, Y=${newPos.y} auf Seite ${newPos.page}.`);
+  };
+
   // ✍️ API-Aufruf, um den Token-Link abzurufen
   const handleAddSignature = async () => {
+    
+    // 🛑 PRÜFUNG: Position muss gesetzt sein
+    if (!sigPosition) {
+        alert("❌ Bitte zuerst die Position der Unterschrift im Dokument festlegen!");
+        return;
+    }
+    
     setLoadingQr(true);
     setSignatureQr(null); 
 
     try {
         // Daten für die API-Route vorbereiten
         const signatureData = {
-            // ✅ WICHTIG: Hier verwenden wir den korrekten Namen aus der URL!
-            customerId: customerId, // Optional, falls verfügbar
+            customerId: customerId,
             customerName: finalCustomerName, 
             documentName: documentName,
             role: 'customer',
-            folderId: folderId        
+            folderId: folderId,
+            // ✅ NEU: Dynamische Position senden
+            signaturePosition: sigPosition,
         };
 
         const res = await fetch('/api/signature/create', {
@@ -74,6 +88,16 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
         setLoadingQr(false);
     }
   };
+  
+  // ✅ NEUE FUNKTION: Wird aufgerufen, wenn der QR-Code geschlossen wird
+  const handleCloseQr = () => {
+      setSignatureMode(false);
+      // Rufe den Callback auf, der den PDF-Editor neu lädt.
+      if (onSignatureClose) {
+          onSignatureClose();
+      }
+  };
+
 
   const handleSaveAndClose = () => {
     alert('💾 (Demo) Änderungen gespeichert & in pCloud hochgeladen.');
@@ -86,7 +110,6 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
       </h1>
 
       <p className="mb-6 text-[#6b3c67]">
-        {/* Hier zeigen wir den Namen an, der von der URL kam (decodiert) */}
         Kunde: <strong>{decodeURIComponent(finalCustomerName) || '-'}</strong> | Dokument: <strong>{documentName || '-'}</strong>
       </p>
 
@@ -107,13 +130,22 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
             >
               Textfeld hinzufügen
             </button>
+            
+            {/* ✅ NEUER BUTTON FÜR POSITIONIERUNG */}
+            <button
+              onClick={handlePlaceSignature}
+              className={`px-4 py-2 ${sigPosition ? 'bg-green-600' : 'bg-[#3498db]'} text-white`} 
+            >
+              Position festlegen {sigPosition ? ' (Gesetzt!)' : ''}
+            </button>
+
 
             <button
               onClick={handleAddSignature}
-              disabled={loadingQr} 
+              disabled={loadingQr || !sigPosition} // Deaktiviert, wenn keine Position gesetzt ist
               className="bg-[#007bff] text-white px-4 py-2"
             >
-              {loadingQr ? 'Link generieren...' : 'Signaturfeld hinzufügen'}
+              {loadingQr ? 'Link generieren...' : 'Signatur starten'}
             </button>
 
             <button
@@ -143,15 +175,16 @@ export default function PdfViewer({ fileUrl, documentName, customerName: propCus
           <div className="bg-white p-6 rounded shadow-lg text-center">
             <h2 className="text-lg font-bold mb-2">📱 QR-Code für Signatur</h2>
             <p className="mb-4 text-sm text-gray-600">
-              Scanne den QR-Code mit deinem Smartphone, um das Dokument zu unterschreiben.
+              **WICHTIG:** Unterschreiben Sie jetzt und schließen Sie dieses Fenster, um die PDF im Editor neu zu laden.
             </p>
             <QRCodeCanvas value={signatureQr} size={200} />
             <div className="mt-4">
               <button
-                onClick={() => setSignatureMode(false)}
+                // ✅ RUFT handleCloseQr AUF
+                onClick={handleCloseQr} 
                 className="bg-[#451a3d] text-white px-4 py-2"
               >
-                Schließen
+                Fertig / Schließen
               </button>
             </div>
           </div>
