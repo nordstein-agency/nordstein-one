@@ -1,55 +1,75 @@
-// pages/api/signature/create.js
+// /pages/api/signature/create.js
 import { supabase } from '../../../lib/supabaseClient';
-import { nanoid } from 'nanoid';
+import { sha256 } from '../../../lib/hash'; // Angenommen, Sie benötigen sha256 hier nicht, aber ich lasse den Import, falls er existiert
+import { createId } from '@paralleldrive/cuid2'; // Angenommen, Sie verwenden cuid2 für den Token
+
+// Dauer, bis der Token abläuft (z.B. 30 Minuten)
+const TOKEN_EXPIRY_MINUTES = 30;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    // req.body wird von Next.js automatisch geparst, wir destrukturieren es direkt.
-    const { customerId, customerName, documentName, folderId, role } = req.body || {};
+    // 1. Daten aus dem Frontend-Body entnehmen
+    const { 
+        customerId, 
+        customerName, 
+        documentName, 
+        role, 
+        folderId, 
+        signaturePosition // ✅ NEU: Die dynamische Position
+    } = req.body; 
+
+    if (!customerId || !documentName || !role || !folderId || !signaturePosition) {
+        return res.status(400).json({ error: 'Missing required fields (customerId, documentName, role, folderId, signaturePosition).' });
+    }
+
+    // 2. Token generieren und Ablaufdatum festlegen
+    const newToken = createId(); 
+    const expirationDate = new Date();
+    expirationDate.setMinutes(expirationDate.getMinutes() + TOKEN_EXPIRY_MINUTES);
+
+    // 3. Session in der Datenbank speichern
+    const { data, error } = await supabase
+        .from('signature_sessions')
+        .insert([
+            {
+                token: newToken,
+                customer_id: customerId,
+                customer_name: customerName,
+                document_name: documentName,
+                role: role,
+                folder_id: folderId,
+                // ✅ KORREKTUR: Die Position wird in die neue JSONB-Spalte gespeichert
+                signature_position: signaturePosition, 
+                expires_at: expirationDate.toISOString(),
+                used: false, // Standardmäßig auf 'false' setzen
+            }
+        ])
+        .select()
+        .single();
     
-    // 💡 KORRIGIERTE PRÜFUNG: Prüft nur die zwingend benötigten Felder.
-    // customerId und folderId sind laut DB-Schema nullable und werden hier ausgelassen.
-    if (!customerName || !documentName || !role) {
-      return res.status(400).json({ error: 'Missing fields' });
-    }
-    if (!['customer','executive'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
-    }
-
-    const token = nanoid(32);
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // +30 Min
-
-    const { error } = await supabase
-      .from('signature_sessions')
-      .insert({
-        token,
-        role,
-        // customerId und folderId werden hier eingefügt. 
-        // Wenn sie undefined sind, setzt Supabase automatisch NULL.
-        customer_id: customerId, 
-        customer_name: customerName,
-        document_name: documentName,
-        folder_id: folderId,
-        expires_at: expiresAt,
-      });
-
     if (error) {
-        console.error("Supabase insert error:", error);
-        return res.status(500).json({ error: 'DB insert failed' });
+        console.error('Database insertion failed in create.js:', error);
+        return res.status(500).json({ error: 'Failed to create signature session.' });
     }
 
-    // Link-Generierung (Verwendet Umgebungsvariable als Fallback)
-    const VERCEL_URL = process.env.NEXT_PUBLIC_BASE_URL;
-    const dynamicOrigin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
-    const origin = VERCEL_URL || dynamicOrigin;
-    
-    // Generiert den korrekten Link mit ?token=...
-    const qrUrl = `${origin}/sign?token=${encodeURIComponent(token)}`;
+    // 4. Signatur-URL für den QR-Code erstellen
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://${req.headers.host}`;
+    const signatureUrl = `${baseUrl}/signature?token=${newToken}`;
 
-    res.status(200).json({ qrUrl, token, expiresAt });
+    // 5. Erfolg zurückmelden
+    res.status(200).json({ 
+        ok: true, 
+        token: newToken, 
+        qrUrl: signatureUrl,
+        expiresAt: expirationDate.toISOString()
+    });
+
   } catch (e) {
-    console.error('signature/create final catch error', e);
+    console.error('signature/create error (FATAL CATCH)', e);
     res.status(500).json({ error: 'Server error' });
   }
 }
