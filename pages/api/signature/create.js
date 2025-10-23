@@ -5,12 +5,12 @@ import { nanoid } from 'nanoid';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    // ❌ ENTFERNT: const { customerId, customerName, documentName, folderId, role } = JSON.parse(req.body || '{}');
-    
-    // ✅ KORREKTUR: req.body ist in Next.js bereits das geparste Objekt.
+    // req.body wird von Next.js automatisch geparst, wir destrukturieren es direkt.
     const { customerId, customerName, documentName, folderId, role } = req.body || {};
     
-    if (!customerId || !customerName || !documentName || !folderId || !role) {
+    // 💡 KORRIGIERTE PRÜFUNG: Prüft nur die zwingend benötigten Felder.
+    // customerId und folderId sind laut DB-Schema nullable und werden hier ausgelassen.
+    if (!customerName || !documentName || !role) {
       return res.status(400).json({ error: 'Missing fields' });
     }
     if (!['customer','executive'].includes(role)) {
@@ -25,7 +25,9 @@ export default async function handler(req, res) {
       .insert({
         token,
         role,
-        customer_id: customerId,
+        // customerId und folderId werden hier eingefügt. 
+        // Wenn sie undefined sind, setzt Supabase automatisch NULL.
+        customer_id: customerId, 
         customer_name: customerName,
         document_name: documentName,
         folder_id: folderId,
@@ -33,23 +35,21 @@ export default async function handler(req, res) {
       });
 
     if (error) {
-        // 💡 Wenn hier ein DB-Fehler auftritt (z.B. falscher Datentyp), 
-        // wird er jetzt korrekt geloggt und der Frontend-Fehler ist spezifischer.
         console.error("Supabase insert error:", error);
         return res.status(500).json({ error: 'DB insert failed' });
     }
 
-    // ... (Link-Generierung bleibt korrekt)
+    // Link-Generierung (Verwendet Umgebungsvariable als Fallback)
     const VERCEL_URL = process.env.NEXT_PUBLIC_BASE_URL;
     const dynamicOrigin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
     const origin = VERCEL_URL || dynamicOrigin;
+    
+    // Generiert den korrekten Link mit ?token=...
     const qrUrl = `${origin}/sign?token=${encodeURIComponent(token)}`;
 
     res.status(200).json({ qrUrl, token, expiresAt });
   } catch (e) {
     console.error('signature/create final catch error', e);
-    // Dieser Fehler sollte nach der Korrektur nicht mehr auftreten, 
-    // dient aber als Fallback für unbekannte Probleme.
     res.status(500).json({ error: 'Server error' });
   }
 }
