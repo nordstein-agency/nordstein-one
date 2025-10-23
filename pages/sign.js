@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/router' 
 import SignatureCanvas from 'react-signature-canvas'
 import { supabase } from '../lib/supabaseClient'
 
@@ -105,7 +105,7 @@ export default function SignPage() {
     <div className="min-h-screen bg-[#f9f7f8] flex flex-col items-center justify-center p-6">
       <h1 className="text-2xl font-bold text-[#451a3d] mb-2">📱 Dokument unterschreiben</h1>
       <p className="mb-6 text-[#6b3c67]">
-        Dokument: <strong>{doc}</strong>
+        Kunde: <strong>{customerName || '-'}</strong> | Dokument: <strong>{documentName || '-'}</strong>
       </p>
 
       {/* Signaturfeld */}
