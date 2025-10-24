@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT SKALIERUNG, SEITENAUSWAHL UND Y-ACHSEN-FIX)
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT Y-ACHSEN-SPIEGELUNG & SEITEN-FIX)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -91,40 +91,48 @@ export default async function handler(req, res) {
     const pdfDoc = await PDFDocument.load(templateBytes);
     
     // 💡 Seiten-Auswahl fixen: Sicherstellen, dass die Seite existiert
-    const sigPageNumber = signature_position?.page || 1; 
-    const pageIndex = Math.max(0, sigPageNumber - 1); // 0-basierter Index
+    const rawPageNumber = signature_position?.page || 1; 
+    const pageIndex = Math.max(0, rawPageNumber - 1); // 0-basierter Index
     
+    let page;
     if (pageIndex >= pdfDoc.getPageCount()) {
-        console.warn(`Seitenzahl ${sigPageNumber} ist ungültig. Verwende Seite 1.`);
-        const page = pdfDoc.getPage(0);
+        console.warn(`Seitenzahl ${rawPageNumber} ist ungültig. Verwende Seite 1.`);
+        page = pdfDoc.getPage(0);
+    } else {
+        page = pdfDoc.getPage(pageIndex);
     }
-    const page = pdfDoc.getPage(pageIndex);
     
     // 🛑 NEU: Abrufen der tatsächlichen PDF-Abmessungen der Seite
     const { width: pageWidth, height: pageHeight } = page.getSize();
-    // 🛑 NEU: Der Bezugspunkt des Viewers (muss mit IFRAME_HEIGHT übereinstimmen)
+    // 🛑 NEU: Der Bezugspunkt des Viewers
     const viewerPixelHeight = 900; 
 
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ SKALIERUNG DER POSITION HINZUFÜGEN
+    // ✅ KORREKTE SKALIERUNG UND SPIEGELUNG FÜR Y-ACHSE
     const rawX = signature_position?.x || 50; 
-    const rawY = signature_position?.y || 120; // Rohwert aus dem Frontend (Pixel von unten)
+    const rawY = signature_position?.y || 120; // Pixel von unten (aus Frontend)
     
     // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
     const x = (rawX / viewerPixelHeight) * pageWidth; 
     
-    // 2. Skalierung der Y-Achse: Pixel zu PDF-Punkte (Y von unten)
+    // 2. Y-Achsen-Berechnung (Kritischer Fix):
+    // Da das Frontend (pdfY = 900 - clickY) die Y-Koordinate bereits von UNTEN berechnet,
+    // müssen wir sie nur skalieren. Der Fehler "zu weit oben" deutet auf eine 
+    // falsche Skalierung oder eine erneute Spiegelung hin.
+    
+    // Wir verwenden die gesendete Koordinate y (Pixel von unten) und skalieren sie.
     let y = (rawY / viewerPixelHeight) * pageHeight;
     
-    // 3. FIX FÜR Y-VERSCHIEBUNG: Subtrahiere die Höhe der Signatur, damit der Klickpunkt 
-    // der OBERE Rand der Unterschrift ist (ästhetisch korrekter).
+    // FIX FÜR Y-VERSCHIEBUNG: Ziehe die Höhe der Signatur ab. Dies positioniert
+    // den UNTEREN Rand der Signatur genau auf dem Klickpunkt (rawY), 
+    // da pdf-lib den UNTEREN linken Punkt als Anker verwendet.
     y = y - pngDims.height; 
     
-    // 🛑 DEBUGGING: Skalierte Werte protokollieren (optional, aber hilfreich)
-    console.log(`[SIGNATURE POS SCALED] Raw X/Y: ${rawX}/${rawY}. Scaled X/Y (Vor Fix): ${((rawY / viewerPixelHeight) * pageHeight).toFixed(2)}. Final Y: ${y.toFixed(2)}. Seite: ${sigPageNumber}`);
+    // 🛑 DEBUGGING: Skalierte Werte protokollieren
+    console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
 
     
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
@@ -146,7 +154,7 @@ export default async function handler(req, res) {
     ].filter(Boolean).join('  •  ');
     
     // Zeitstempel unter der Signatur (dynamische Y-Koordinate)
-    // ✅ VERWENDET DEN FIXIERTEN y-Wert, um den Zeitstempel 30 Punkte UNTER die Signatur zu setzen.
+    // ✅ VERWENDET DEN FIXIERTEN y-Wert
     const infoTextY = y - 30; 
     page.drawText(infoText, { x: x, y: infoTextY, size: 9, color: rgb(0.2, 0.2, 0.2), font });
 
