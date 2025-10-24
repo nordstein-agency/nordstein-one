@@ -110,18 +110,34 @@ export default async function handler(req, res) {
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ KORRIGIERTE SKALIERUNG UND Y-ACHSE (zentriert & präzise)
-    const rawX = signature_position?.x || 50; 
-    const rawY = signature_position?.y || 120; // <--- KOMMT VON UNTEN (PdfViewer spiegelt bereits)
-    
-    // 1️⃣ Skalierung der X-Achse: Pixel → PDF-Punkte
-    const x = (rawX / viewerPixelHeight) * pageWidth; 
-    
-    // 2️⃣ Skalierung der Y-Achse: rawY ist bereits von unten, also direkte Skalierung
-    let y = (rawY / viewerPixelHeight) * pageHeight;
-    
-    // 3️⃣ Zentrierung der Signatur (Klickpunkt ≈ Mitte des Bildes)
-    y = y - pngDims.height / 2;
+    // ✅ NEUE SKALIERUNG: PROPORTIONAL UND GESPIGELT
+const rawX = signature_position?.x || 50;
+const rawY = signature_position?.y || 120;
+
+// 🧮 Bildschirmhöhen (vom Viewer)
+const viewerHeight = 900; // entspricht IFRAME_HEIGHT in PdfViewer
+// Die PDF-Seite selbst hat pageWidth × pageHeight Punkte
+
+// 1️⃣ X-Skalierung (proportional)
+const x = (rawX / pageWidth) * pageWidth; // identisch, falls iframe=volle Breite
+
+// 2️⃣ Y-Skalierung – wichtig: pdf-lib hat Ursprung unten, unser rawY ist ebenfalls „von unten“,
+// aber wir müssen das Seitenverhältnis des Viewers berücksichtigen.
+// Also invertieren wir den Faktor:
+const y = (rawY / viewerHeight) * pageHeight;
+
+// 3️⃣ Kein +/- pngDims.height – wir zeichnen exakt dort
+page.drawImage(pngImage, {
+  x,
+  y: y - pngDims.height / 2, // optional leichte Zentrierung
+  width: pngDims.width,
+  height: pngDims.height,
+});
+
+console.log(
+  `[FIXED POS] rawX=${rawX}, rawY=${rawY}, → x=${x.toFixed(2)}, y=${y.toFixed(2)}, pageHeight=${pageHeight}`
+);
+
 
     // 🧭 DEBUGGING: Skalierte Werte anzeigen
     console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
