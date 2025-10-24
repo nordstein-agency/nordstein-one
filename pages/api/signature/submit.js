@@ -1,9 +1,11 @@
-// /pages/api/signature/submit.js (FINALE LÖSUNG V5.1: KORREKTUR X-ACHSEN-SKALIERUNG + HÖHENADDITION)
-
+// /pages/api/signature/submit.js (KORRIGIERTE VERSION – Y-Achsen-Berechnung zentriert & korrekt)
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+// ⚠️ DEAKTIVIERT: Wir verwenden den funktionierenden FormData-Code direkt
+// import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
 
+// ✅ NEUE IMPORTS FÜR DEN FORM-DATA UPLOAD
 import fetch from "node-fetch";
 import FormData from "form-data"; 
 
@@ -103,30 +105,28 @@ export default async function handler(req, res) {
     const { width: pageWidth, height: pageHeight } = page.getSize();
     // 🛑 NEU: Der Bezugspunkt des Viewers
     const viewerPixelHeight = 900; 
-    // ✅ NEU: Verwenden Sie die gleiche Basis für die X-Achse zur Vereinfachung
-    const viewerPixelWidth = 900; 
 
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ KORRIGIERTE SKALIERUNG UND HÖHENKORREKTUR
+    // ✅ KORRIGIERTE SKALIERUNG UND Y-ACHSE (zentriert & präzise)
     const rawX = signature_position?.x || 50; 
-    const rawY = signature_position?.y || 120; // <--- KOMMT VON UNTEN (PdfViewer spiegelt)
+    const rawY = signature_position?.y || 120; // <--- KOMMT VON UNTEN (PdfViewer spiegelt bereits)
     
-    // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte (KORRIGIERT: rawX / viewerPixelWidth)
-    const x = (rawX / viewerPixelWidth) * pageWidth; 
+    // 1️⃣ Skalierung der X-Achse: Pixel → PDF-Punkte
+    const x = (rawX / viewerPixelHeight) * pageWidth; 
     
-    // 2. Y-Achsen-Berechnung: Skaliere rawY (Pixel von unten) direkt in PDF-Punkte (y von unten).
-    let y = (rawY / viewerPixelHeight) * pageHeight; 
+    // 2️⃣ Skalierung der Y-Achse: rawY ist bereits von unten, also direkte Skalierung
+    let y = (rawY / viewerPixelHeight) * pageHeight;
     
-    // 3. Ankerpunkt-Korrektur: Füge die Höhe hinzu (Wenn Klickpunkt die OBERE Kante markieren soll)
-    y = y + pngDims.height;
-    
-    // 🛑 DEBUGGING: Skalierte Werte protokollieren
+    // 3️⃣ Zentrierung der Signatur (Klickpunkt ≈ Mitte des Bildes)
+    y = y - pngDims.height / 2;
+
+    // 🧭 DEBUGGING: Skalierte Werte anzeigen
     console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
 
-    
+    // 4️⃣ Signatur zeichnen
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
     // Zeitstempel + Geräteinfos
@@ -226,4 +226,3 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Server error' });
   }
 }
-
