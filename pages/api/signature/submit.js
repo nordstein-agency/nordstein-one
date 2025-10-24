@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT DIRECT FORM DATA UPLOAD UND SKALIERUNG)
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT SKALIERUNG, SEITENAUSWAHL UND Y-ACHSEN-FIX)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -90,9 +90,14 @@ export default async function handler(req, res) {
     // 3) PDF bearbeiten: Unterschrift + Zeitstempel + Gerätedaten
     const pdfDoc = await PDFDocument.load(templateBytes);
     
-    // 💡 Dynamische Positionierung
+    // 💡 Seiten-Auswahl fixen: Sicherstellen, dass die Seite existiert
     const sigPageNumber = signature_position?.page || 1; 
     const pageIndex = Math.max(0, sigPageNumber - 1); // 0-basierter Index
+    
+    if (pageIndex >= pdfDoc.getPageCount()) {
+        console.warn(`Seitenzahl ${sigPageNumber} ist ungültig. Verwende Seite 1.`);
+        const page = pdfDoc.getPage(0);
+    }
     const page = pdfDoc.getPage(pageIndex);
     
     // 🛑 NEU: Abrufen der tatsächlichen PDF-Abmessungen der Seite
@@ -111,11 +116,15 @@ export default async function handler(req, res) {
     // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
     const x = (rawX / viewerPixelHeight) * pageWidth; 
     
-    // 2. Skalierung der Y-Achse: Pixel zu PDF-Punkte. Die Signatur_Position ist BEREITS von unten gespiegelt.
-    const y = (rawY / viewerPixelHeight) * pageHeight;
+    // 2. Skalierung der Y-Achse: Pixel zu PDF-Punkte (Y von unten)
+    let y = (rawY / viewerPixelHeight) * pageHeight;
+    
+    // 3. FIX FÜR Y-VERSCHIEBUNG: Subtrahiere die Höhe der Signatur, damit der Klickpunkt 
+    // der OBERE Rand der Unterschrift ist (ästhetisch korrekter).
+    y = y - pngDims.height; 
     
     // 🛑 DEBUGGING: Skalierte Werte protokollieren (optional, aber hilfreich)
-    console.log(`[SIGNATURE POS SCALED] Raw X/Y: ${rawX}/${rawY}. Scaled X/Y: ${x.toFixed(2)}/${y.toFixed(2)}`);
+    console.log(`[SIGNATURE POS SCALED] Raw X/Y: ${rawX}/${rawY}. Scaled X/Y (Vor Fix): ${((rawY / viewerPixelHeight) * pageHeight).toFixed(2)}. Final Y: ${y.toFixed(2)}. Seite: ${sigPageNumber}`);
 
     
     page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
@@ -137,7 +146,7 @@ export default async function handler(req, res) {
     ].filter(Boolean).join('  •  ');
     
     // Zeitstempel unter der Signatur (dynamische Y-Koordinate)
-    // ✅ VERWENDET DEN SKALIERTEN y-Wert
+    // ✅ VERWENDET DEN FIXIERTEN y-Wert, um den Zeitstempel 30 Punkte UNTER die Signatur zu setzen.
     const infoTextY = y - 30; 
     page.drawText(infoText, { x: x, y: infoTextY, size: 9, color: rgb(0.2, 0.2, 0.2), font });
 
