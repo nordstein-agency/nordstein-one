@@ -1,12 +1,9 @@
-// /pages/api/signature/submit.js (FINALE LÖSUNG: EINFACHE SKALIERUNG - rawY kommt von UNTEN + HÖHENADDITION)
+// /pages/api/signature/submit.js (FINALE LÖSUNG V5.1: KORREKTUR X-ACHSEN-SKALIERUNG + HÖHENADDITION)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-// ⚠️ DEAKTIVIERT: Wir verwenden den funktionierenden FormData-Code direkt
-// import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
 
-// ✅ NEUE IMPORTS FÜR DEN FORM-DATA UPLOAD
 import fetch from "node-fetch";
 import FormData from "form-data"; 
 
@@ -106,6 +103,8 @@ export default async function handler(req, res) {
     const { width: pageWidth, height: pageHeight } = page.getSize();
     // 🛑 NEU: Der Bezugspunkt des Viewers
     const viewerPixelHeight = 900; 
+    // ✅ NEU: Verwenden Sie die gleiche Basis für die X-Achse zur Vereinfachung
+    const viewerPixelWidth = 900; 
 
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
     const pngImage = await pdfDoc.embedPng(pngBytes);
@@ -115,16 +114,13 @@ export default async function handler(req, res) {
     const rawX = signature_position?.x || 50; 
     const rawY = signature_position?.y || 120; // <--- KOMMT VON UNTEN (PdfViewer spiegelt)
     
-    // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
-    const x = (rawX / viewerPixelHeight) * pageWidth; 
+    // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte (KORRIGIERT: rawX / viewerPixelWidth)
+    const x = (rawX / viewerPixelWidth) * pageWidth; 
     
     // 2. Y-Achsen-Berechnung: Skaliere rawY (Pixel von unten) direkt in PDF-Punkte (y von unten).
     let y = (rawY / viewerPixelHeight) * pageHeight; 
     
-    // 3. Ankerpunkt-Korrektur:
-    // Da pdf-lib das Bild an der UNTEREN Kante platziert, aber der Klickpunkt (rawY) wahrscheinlich 
-    // die OBERE Kante der Signatur markieren soll, muss y (der untere Rand) um die Höhe des Bildes
-    // nach OBEN (d.h. y WERT WIRD GRÖSSER) verschoben werden.
+    // 3. Ankerpunkt-Korrektur: Füge die Höhe hinzu (Wenn Klickpunkt die OBERE Kante markieren soll)
     y = y + pngDims.height;
     
     // 🛑 DEBUGGING: Skalierte Werte protokollieren
@@ -230,3 +226,4 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Server error' });
   }
 }
+
