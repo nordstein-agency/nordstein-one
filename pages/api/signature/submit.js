@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT AGGRESSIVEM Y-ACHSEN-FIX: BEHANDLUNG ALS PIXEL VON OBEN)
+// /pages/api/signature/submit.js (FINALE KORREKTUR: Y-ACHSEN-INVERTIERUNG + KORREKTE HÖHENKORREKTUR)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -113,28 +113,21 @@ export default async function handler(req, res) {
 
     // ✅ KORRIGIERTE SKALIERUNG UND INVERTIERUNG FÜR Y-ACHSE
     const rawX = signature_position?.x || 50; 
-    const rawY = signature_position?.y || 120; // Pixel von unten (aus Frontend)
+    const rawY = signature_position?.y || 120; // Pixel von oben (angenommen, da die Achse verkehrt ist)
     
     // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
     const x = (rawX / viewerPixelHeight) * pageWidth; 
     
-    // 2. Y-Achsen-Berechnung (Kritischer Fix):
-    // Da das Problem jetzt "oben zu weit oben / unten zu weit darüber" ist,
-    // ist die Spiegelung des Frontends möglicherweise defekt oder fehlt ganz.
-    // Wir nehmen an, dass 'rawY' NICHT von unten, sondern von oben kommt, um eine lineare Projektion zu erzwingen.
-    
+    // 2. Y-Achsen-Berechnung:
     // Skaliere rawY (als y von oben)
     const scaledYFromTop = (rawY / viewerPixelHeight) * pageHeight; 
     
-    // Invertiere von oben nach unten (PDF-Koordinatensystem)
+    // Invertiere von oben nach unten (PDF-Koordinatensystem: y=0 ist unten)
     let y = pageHeight - scaledYFromTop; 
     
-    // 3. Korrektur des Ankerpunkts: Da `y` jetzt der skalierte OBERE Rand des Klicks ist (im PDF-Koordinatensystem),
-    // muss der untere Rand des Bildes (der Anchor Point von pdf-lib) nach unten verschoben werden.
-    // Wir verschieben die Signatur um ihre eigene Höhe nach oben (y wird größer),
-    // damit der OBERE Rand der Signatur auf dem Klickpunkt landet.
-    // ACHTUNG: Die vorherige Subtraktion von pngDims.height war falsch.
-    y = y + pngDims.height;
+    // 3. Korrektur des Ankerpunkts: Ziehe die Höhe der Signatur ab.
+    // Dadurch wird der UNTERE Rand der Signatur auf den Klickpunkt gesetzt (für das visuelle Gefühl der Oberkante).
+    y = y - pngDims.height;
     
     // 🛑 DEBUGGING: Skalierte Werte protokollieren
     console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
@@ -159,7 +152,7 @@ export default async function handler(req, res) {
     ].filter(Boolean).join('  •  ');
     
     // Zeitstempel unter der Signatur (dynamische Y-Koordinate)
-    const infoTextY = y - 30; // 30 Punkte unter dem (korrigierten) Ankerpunkt der Signatur
+    const infoTextY = y - 30; // 30 Punkte unter dem Ankerpunkt der Signatur
     page.drawText(infoText, { x: x, y: infoTextY, size: 9, color: rgb(0.2, 0.2, 0.2), font });
 
 
