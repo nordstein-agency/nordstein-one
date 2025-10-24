@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (FINALE KORREKTUR V3: Y-ACHSEN-INVERTIERUNG + KORREKTE HÖHENKORREKTUR)
+// /pages/api/signature/submit.js (FINALE LÖSUNG: EINFACHE SKALIERUNG - rawY kommt von UNTEN + HÖHENADDITION)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -111,23 +111,21 @@ export default async function handler(req, res) {
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ KORRIGIERTE SKALIERUNG UND INVERTIERUNG FÜR Y-ACHSE
+    // ✅ KORRIGIERTE SKALIERUNG UND HÖHENKORREKTUR
     const rawX = signature_position?.x || 50; 
-    const rawY = signature_position?.y || 120; // Pixel von oben (angenommen)
+    const rawY = signature_position?.y || 120; // <--- KOMMT VON UNTEN (PdfViewer spiegelt)
     
     // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
     const x = (rawX / viewerPixelHeight) * pageWidth; 
     
-    // 2. Y-Achsen-Berechnung:
-    // Skaliere rawY (als y von oben)
-    const scaledYFromTop = (rawY / viewerPixelHeight) * pageHeight; 
+    // 2. Y-Achsen-Berechnung: Skaliere rawY (Pixel von unten) direkt in PDF-Punkte (y von unten).
+    let y = (rawY / viewerPixelHeight) * pageHeight; 
     
-    // Invertiere von oben nach unten (PDF-Koordinatensystem: y=0 ist unten)
-    let y = pageHeight - scaledYFromTop; 
-    
-    // 3. Korrektur des Ankerpunkts: Ziehe die Höhe der Signatur ab.
-    // Dadurch wird der UNTERE Rand der Signatur genau auf den gewünschten Klickpunkt gesetzt (y).
-    y = y - pngDims.height;
+    // 3. Ankerpunkt-Korrektur:
+    // Da pdf-lib das Bild an der UNTEREN Kante platziert, aber der Klickpunkt (rawY) wahrscheinlich 
+    // die OBERE Kante der Signatur markieren soll, muss y (der untere Rand) um die Höhe des Bildes
+    // nach OBEN (d.h. y WERT WIRD GRÖSSER) verschoben werden.
+    y = y + pngDims.height;
     
     // 🛑 DEBUGGING: Skalierte Werte protokollieren
     console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
