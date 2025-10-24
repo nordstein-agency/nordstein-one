@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (FINALE KORREKTUR: Y-ACHSEN-INVERTIERUNG + KORREKTE HÖHENKORREKTUR)
+// /pages/api/signature/submit.js (FINALE KORREKTUR V3: Y-ACHSEN-INVERTIERUNG + KORREKTE HÖHENKORREKTUR)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
 
     // ✅ KORRIGIERTE SKALIERUNG UND INVERTIERUNG FÜR Y-ACHSE
     const rawX = signature_position?.x || 50; 
-    const rawY = signature_position?.y || 120; // Pixel von oben (angenommen, da die Achse verkehrt ist)
+    const rawY = signature_position?.y || 120; // Pixel von oben (angenommen)
     
     // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
     const x = (rawX / viewerPixelHeight) * pageWidth; 
@@ -126,7 +126,7 @@ export default async function handler(req, res) {
     let y = pageHeight - scaledYFromTop; 
     
     // 3. Korrektur des Ankerpunkts: Ziehe die Höhe der Signatur ab.
-    // Dadurch wird der UNTERE Rand der Signatur auf den Klickpunkt gesetzt (für das visuelle Gefühl der Oberkante).
+    // Dadurch wird der UNTERE Rand der Signatur genau auf den gewünschten Klickpunkt gesetzt (y).
     y = y - pngDims.height;
     
     // 🛑 DEBUGGING: Skalierte Werte protokollieren
