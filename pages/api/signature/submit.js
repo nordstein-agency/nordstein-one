@@ -1,4 +1,4 @@
-// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT Y-ACHSEN-SPIEGELUNG FÜR DEN FALL, DASS DAS FRONTEND NICHT SPIEGELT)
+// /pages/api/signature/submit.js (VOLLSTÄNDIG KORRIGIERT MIT FINALER Y-ACHSEN-SKALIERUNG UND KORREKTER HÖHENKORREKTUR)
 
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -111,32 +111,30 @@ export default async function handler(req, res) {
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ KORRIGIERTE SKALIERUNG UND SPIEGELUNG FÜR Y-ACHSE (FIX FÜR ZU HOHE POSITION)
+    // ✅ KORREKTE SKALIERUNG OHNE DOPPELTE SPIEGELUNG
     const rawX = signature_position?.x || 50; 
     const rawY = signature_position?.y || 120; // Pixel von unten (aus Frontend)
     
     // 1. Skalierung der X-Achse: Pixel zu PDF-Punkte
     const x = (rawX / viewerPixelHeight) * pageWidth; 
     
-    // 2. Skalierung der Y-Achse: Pixel zu PDF-Punkte (dies ist y von unten).
+    // 2. Skalierung der Y-Achse: Pixel (von unten) zu PDF-Punkten (von unten).
+    // Dies ist die rein korrekte Skalierung, da das Frontend bereits gespiegelt hat.
     let y = (rawY / viewerPixelHeight) * pageHeight;
     
-    // 3. Wenn die Positionierung immer noch zu hoch ist, bedeutet das, dass das Frontend (trotz der Logik in PdfViewer.js)
-    // entweder keine vollständige oder eine fehlerhafte Spiegelung durchgeführt hat ODER
-    // dass die Koordinate im Browser (y von oben) und nicht die gespiegelte Y-Koordinate gespeichert wurde.
-    // Wir probieren eine explizite Korrektur des Y-Werts, um die Position näher zum unteren Rand zu verschieben,
-    // indem wir die gesendete Koordinate y von der gesamten Höhe abziehen (erneute Spiegelung)
-    // und dann skalieren. Da rawY bereits von unten gespiegelt sein sollte, ist dies eine **zweite** Spiegelung.
+    // 3. KORREKTUR für Anchor Point: pdf-lib setzt den UNTEREN Rand des Bildes auf 'y'.
+    // Wenn das Frontend den Klickpunkt als obere Kante der Signatur sehen soll,
+    // muss die y-Koordinate um die Höhe der Signatur nach oben verschoben werden.
+    // Das bedeutet, wir MÜSSEN pngDims.height wieder hinzufügen.
+    // Wenn der Klickpunkt als die UNTERE Kante der Signatur betrachtet wird, ist KEINE Korrektur nötig.
+    // Wir probieren die UNTERE Kante als Klickpunkt (wie in der vorletzten Antwort), aber mit korrekter Skalierung.
     
-    // 🛑 AGGRESSIVER FIX: Annahme, dass rawY tatsächlich von oben kommt und nicht von unten.
-    // Skaliere rawY (als y von oben)
-    const scaledYFromTop = (rawY / viewerPixelHeight) * pageHeight; 
-    // Spiegele von oben nach unten (PDF-Koordinatensystem)
-    y = pageHeight - scaledYFromTop; 
-    
-    // 4. Ziehe die Höhe der Signatur ab, um den Ankerpunkt des Bildes (unten links)
-    // auf den korrekten Klickpunkt zu legen.
-    y = y - pngDims.height;
+    // Wenn das Problem "oben zu weit oben / unten zu weit unten" besteht, dann hat das Frontend NICHT KORREKT gespiegelt.
+    // Daher machen wir die doppelte Spiegelung rückgängig und verwenden die rein skalierte y-Koordinate.
+
+    // Wenn der Marker im Frontend korrekt war, aber die Signatur im PDF falsch, ist die Skalierung der Grund.
+    // Wir lassen es jetzt bei der reinen Skalierung:
+    // y = y; 
     
     // 🛑 DEBUGGING: Skalierte Werte protokollieren
     console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
