@@ -134,7 +134,7 @@ const fullDocumentName = uploadedFile + '.pdf';
         
         // Fügen Sie den 'forcename'-Parameter zur finalen URL hinzu, um den korrekten 
         // Dateinamen und Content-Type im Browser zu erzwingen und die PDF lesbar zu machen.
-        fileUrlFinal = `${directDownloadUrl}&forcename=${encodeURIComponent(fullDocumentName)}`;
+        fileUrlFinal = `${directDownloadUrl}?forcename=${encodeURIComponent(fullDocumentName)}`;
         
         console.log('🔗 Finaler, direkter PDF-Link (mit forcename):', fileUrlFinal)
         // 💡 KORREKTUR ENDE 💡
