@@ -1,26 +1,236 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
+// Anfang der Modal-Komponente für das Anlegen neuer Partner (BLEIBT UNVERÄNDERT)
+const PartnerModal = ({ isOpen, onClose }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    adress: '',
+    contact_person: '',
+    partner_id: '',
+  })
+  const [loading, setLoading] = useState(false)
+
+  if (!isOpen) return null
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    
+    // Daten für die 'partners' Tabelle
+    const partnerData = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      adress: formData.adress,
+      contact_person: formData.contact_person,
+      partner_id: formData.partner_id,
+    }
+
+    const authEmail = formData.email 
+    
+    if (!partnerData.name || !authEmail) {
+        alert('Name und E-Mail sind erforderlich.')
+        setLoading(false)
+        return
+    }
+
+    try {
+        // 1. Auth-User erstellen und E-Mail senden (über API Route)
+        const apiResponse = await fetch('/api/create-auth-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: authEmail }),
+        })
+
+        if (!apiResponse.ok) {
+            const errorData = await apiResponse.json()
+            throw new Error(errorData.error || 'Fehler beim Erstellen des Auth-Users.')
+        }
+
+        // 2. Partner in der 'partners' Tabelle speichern
+        const { error: partnerError } = await supabase
+            .from('partners')
+            .insert([partnerData]) // Speichert in Ihrer 'partners' Tabelle
+            .select()
+
+        if (partnerError) throw partnerError
+
+        alert(`Partner "${partnerData.name}" wurde angelegt und die E-Mail zum Passwort setzen wurde an ${authEmail} gesendet.`)
+        
+        // Modal schließen und Formular zurücksetzen
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            adress: '',
+            contact_person: '',
+            partner_id: '',
+        })
+        onClose()
+        
+    } catch (error) {
+        console.error('Fehler beim Anlegen des Partners:', error)
+        alert(`Fehler beim Anlegen des Partners: ${error.message}`)
+    } finally {
+        setLoading(false)
+    }
+  }
+
+
+  return (
+    // Modal-Stil: Tailwind Klassen
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white p-8 max-w-lg w-full rounded-lg shadow-2xl">
+        <h3 className="text-2xl font-bold text-[#451a3d] mb-6">Neuen Partner anlegen</h3>
+        
+        <form onSubmit={handleSubmit}>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">Name*</label>
+            <input 
+              type="text" 
+              name="name" 
+              id="name" 
+              value={formData.name} 
+              onChange={handleChange} 
+              required 
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-[#451a3d]"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">E-Mail* (für Login)</label>
+            <input 
+              type="email" 
+              name="email" 
+              id="email" 
+              value={formData.email} 
+              onChange={handleChange} 
+              required 
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-[#451a3d]"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="partner_id">Partner-ID</label>
+            <input 
+              type="text" 
+              name="partner_id" 
+              id="partner_id" 
+              value={formData.partner_id} 
+              onChange={handleChange} 
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-[#451a3d]"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="contact_person">Ansprechpartner</label>
+            <input 
+              type="text" 
+              name="contact_person" 
+              id="contact_person" 
+              value={formData.contact_person} 
+              onChange={handleChange} 
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-[#451a3d]"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="adress">Adresse</label>
+            <input 
+              type="text" 
+              name="adress" 
+              id="adress" 
+              value={formData.adress} 
+              onChange={handleChange} 
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-[#451a3d]"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phone">Telefon</label>
+            <input 
+              type="tel" 
+              name="phone" 
+              id="phone" 
+              value={formData.phone} 
+              onChange={handleChange} 
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-[#451a3d]"
+            />
+          </div>
+          
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="bg-gray-300 text-gray-800 px-4 py-2 font-medium rounded-none hover:bg-gray-400 disabled:opacity-50"
+              disabled={loading}
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              className="bg-[#451a3d] text-white px-4 py-2 font-medium rounded-none hover:bg-[#5e2a56] disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? 'Speichern...' : 'Partner speichern'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+// Ende der Modal-Komponente
+
+
 export default function Projects() {
   const [projects, setProjects] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedProject, setSelectedProject] = useState(null)
   const [usersMap, setUsersMap] = useState({})
   const [statusFilter, setStatusFilter] = useState('')
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false) 
+  const [userRole, setUserRole] = useState(null) // NEU: State für die Rolle des eingeloggten Benutzers
+  const [loadingInitial, setLoadingInitial] = useState(true) // NEU: Lade-State für die initiale Rolle
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchProjectsAndUserRole = async () => {
+      setLoadingInitial(true) // Setzen des Lade-States
+
       const { data: authUserData } = await supabase.auth.getUser()
-      if (!authUserData?.user) return
+      if (!authUserData?.user) {
+        setLoadingInitial(false)
+        return
+      }
       const authEmail = authUserData.user.email
 
+      // 1. Benutzerdaten (inkl. Rolle) abrufen
       const { data: currentUserData } = await supabase
         .from('users')
-        .select('id, leader')
+        .select('id, leader, role') // WICHTIG: role hinzufügen
         .eq('email', authEmail)
         .single()
-      if (!currentUserData) return
+      
+      if (currentUserData) {
+        setUserRole(currentUserData.role) // Rolle speichern
+      } else {
+        setUserRole(null)
+      }
 
+      if (!currentUserData) {
+        setLoadingInitial(false)
+        return
+      }
+      
+      // 2. Projekt-Lade-Logik (wie gehabt)
       const getSubordinates = async (userId) => {
         const { data } = await supabase.from('users').select('id').eq('leader', userId)
         return data?.map((u) => u.id) || []
@@ -40,6 +250,7 @@ export default function Projects() {
         .in('user_id', userIds)
       if (!projectsData || projectsData.length === 0) {
         setProjects([])
+        setLoadingInitial(false)
         return
       }
 
@@ -78,9 +289,10 @@ export default function Projects() {
         user_name: usersMapTemp[p.user_id] || '-'
       }))
       setProjects(finalProjects)
+      setLoadingInitial(false) // Beenden des Lade-States
     }
 
-    fetchProjects()
+    fetchProjectsAndUserRole()
   }, [])
 
   const filteredProjects = projects.filter((project) => {
@@ -113,9 +325,33 @@ export default function Projects() {
     alert(`Projekt "${selectedProject.tarif}" wurde übernommen.`)
   }
 
+  // Funktionen zum Öffnen/Schließen des neuen Partner-Modals
+  const handleOpenPartnerModal = () => setIsPartnerModalOpen(true)
+  const handleClosePartnerModal = () => setIsPartnerModalOpen(false)
+
+  if (loadingInitial) return <div className="max-w-6xl mx-auto py-12 px-6">Lädt...</div>
+
+
+  // Bedingung zur Anzeige des Buttons
+  const showPartnerButton = userRole === 'Geschäftsführung'
+
   return (
     <div className="max-w-6xl mx-auto py-12 px-6">
-      <h1 className="text-3xl font-bold text-[#451a3d] mb-2">Projekte</h1>
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-3xl font-bold text-[#451a3d]">Projekte</h1>
+        
+        {/* BEDINGTE ANZEIGE DES BUTTONS */}
+        {showPartnerButton && (
+          <button
+            onClick={handleOpenPartnerModal}
+            className="bg-[#451a3d] text-white px-4 py-2 font-medium border-0 outline-none shadow-none hover:bg-[#5e2a56] focus:outline-none"
+            style={{ fontFamily: 'Inter Tight, Inter, system-ui, sans-serif' }}
+          >
+            Neuen Partner anlegen
+          </button>
+        )}
+      </div>
+
       <p className="text-[#6b3c67] mb-8">Hier findest du alle aktuellen Projekte im Überblick.</p>
 
       {/* Suchfeld + Filter */}
@@ -244,6 +480,12 @@ export default function Projects() {
           </div>
         </div>
       )}
+
+      {/* Das Modal für das Anlegen von Partnern wird hier gerendert */}
+      <PartnerModal 
+          isOpen={isPartnerModalOpen} 
+          onClose={handleClosePartnerModal} 
+      />
     </div>
   )
 }
