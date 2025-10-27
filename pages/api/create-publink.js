@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
     // 2. Direkten Download-Link anfordern (getpublinkdownload)
     // Dieser Aufruf gibt die Server-IP, den Pfad und die Ticket-ID für den direkten Download zurück
-    const downloadApiUrl = `${apiUrl}/getpublinkdownload?code=${publinkCode}`;
+    const downloadApiUrl = `${apiUrl}/getpublinkdownload?code=${publinkCode}&skipauthorization=1`;
     console.log("📤 2. Fordere direkten Download-Link an:", downloadApiUrl);
 
     let downloadRes = await fetch(downloadApiUrl, { method: "POST" });
