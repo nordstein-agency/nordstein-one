@@ -3,50 +3,46 @@ import { supabase } from '../lib/supabaseClient'
 import Link from 'next/link'
 
 // 💡 Konstante für Rollen-Mapping 💡
-// Vertriebspartner (User-Tabelle) haben die höchste Berechtigungsstufe
+// Benutzer mit anderer Rolle als "Partner"
 const ROLE_FULL_ACCESS = 'full_access';
-// Partneragenturen (Partners-Tabelle) haben eingeschränkten Zugang
+// Partneragenturen (Rolle = "Partner")
 const ROLE_PARTNER_AGENCY = 'partner_agency'; 
 // Standardwert, falls nicht gefunden, oder nur eingeloggt
 const ROLE_GUEST = 'guest'; 
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
-  // NEU: Zustand für die berechnete Rolle
+  // Zustand für die berechnete Rolle
   const [userRole, setUserRole] = useState(ROLE_GUEST);
 
   // -------------------------------------------------------------------------
-  // 🔹 Funktion zur Rollenbestimmung
+  // 🔹 Funktion zur Rollenbestimmung (VEREINFACHT)
   // -------------------------------------------------------------------------
   const checkUserRole = useCallback(async (email) => {
     if (!email) return ROLE_GUEST;
 
-    // 1. In der "users"-Tabelle (Vertriebspartner = FULL ACCESS) prüfen
-    // Bei einem Match ist der User ein Vertriebspartner und erhält vollen Zugriff.
+    // Nur in der "users"-Tabelle nach der Rolle prüfen
     const { data: userData } = await supabase
       .from('users')
-      .select('id')
+      .select('role') // Nur die Rolle abfragen
       .eq('email', email)
       .maybeSingle();
 
-    if (userData) {
-      return ROLE_FULL_ACCESS;
+    if (!userData || !userData.role) {
+      // Kein Eintrag in users gefunden
+      return ROLE_GUEST;
     }
 
-    // 2. In der "partners"-Tabelle (Partneragentur = EINGESCHRÄNKTER ZUGRIFF) prüfen
-    // Nur prüfen, wenn er NICHT in der "users" Tabelle gefunden wurde.
-    const { data: partnerData } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    const role = userData.role.toLowerCase();
 
-    if (partnerData) {
+    // Wenn Rolle explizit "Partner" ist, eingeschränkten Zugang geben
+    if (role === 'partner') {
       return ROLE_PARTNER_AGENCY;
     }
 
-    // 3. Wenn in keiner Tabelle gefunden
-    return ROLE_GUEST;
+    // Für alle anderen Rollen (z.B. Sales Trainee, Sales Manager, etc.) vollen Zugang geben
+    return ROLE_FULL_ACCESS;
+    
   }, []);
   
   // -------------------------------------------------------------------------
@@ -75,7 +71,7 @@ export default function Navbar() {
     });
 
     return () => listener?.subscription.unsubscribe();
-  }, [checkUserRole]); // checkUserRole ist stabil (durch useCallback), kann hier rein
+  }, [checkUserRole]);
 
   // -------------------------------------------------------------------------
   // 🔹 Logout
@@ -92,8 +88,7 @@ export default function Navbar() {
 
   // Hilfsfunktion zur bedingten Anzeige der Links
   const renderNavLinks = () => {
-    // 🛑 Wichtig: Die volle Berechtigung umfasst auch den Fall, 
-    // dass der User in BEIDEN Tabellen ist, da er zuerst in 'users' geprüft wird.
+    // Voller Zugang (Rolle ist NICHT "Partner")
     if (userRole === ROLE_FULL_ACCESS) {
       return (
         <>
@@ -107,17 +102,18 @@ export default function Navbar() {
       );
     } 
     
-    // Eingeschränkter Zugriff (Partneragentur)
+    // Eingeschränkter Zugang (Rolle ist "Partner"): Profil, Projekte, Dashboard
     else if (userRole === ROLE_PARTNER_AGENCY) {
       return (
         <>
+          <Link href="/dashboard" className="nav-link">Dashboard</Link>
           <Link href="/profile" className="nav-link">Profil</Link>
           <Link href="/projects" className="nav-link">Projekte</Link>
         </>
       );
     }
     
-    // Keine Berechtigung oder noch nicht geprüft (keine Links anzeigen)
+    // Keine Links anzeigen
     return null;
   };
 
@@ -135,7 +131,7 @@ export default function Navbar() {
         {/* Navigation (nur wenn eingeloggt) */}
         {user && (
           <>
-            {/* 🛑 HIER WIRD DIE NAVIGATION BEDINGT GERENDERT */}
+            {/* HIER WIRD DIE NAVIGATION BEDINGT GERENDERT */}
             <div className="flex gap-6">
               {renderNavLinks()}
             </div>

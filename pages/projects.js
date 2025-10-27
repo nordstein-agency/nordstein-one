@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-// Anfang der Modal-Komponente für das Anlegen neuer Partner (BLEIBT UNVERÄNDERT)
+// Anfang der Modal-Komponente für das Anlegen neuer Partner
 const PartnerModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -53,7 +53,7 @@ const PartnerModal = ({ isOpen, onClose }) => {
             const errorData = await apiResponse.json()
             throw new Error(errorData.error || 'Fehler beim Erstellen des Auth-Users.')
         }
-
+        
         // 2. Partner in der 'partners' Tabelle speichern
         const { error: partnerError } = await supabase
             .from('partners')
@@ -61,6 +61,29 @@ const PartnerModal = ({ isOpen, onClose }) => {
             .select()
 
         if (partnerError) throw partnerError
+
+        // 🛑 NEU: ZUSÄTZLICHER EINTRAG IN DER 'USERS' TABELLE 🛑
+        const userData = {
+            first_name: formData.name,       // name -> first_name
+            business_email: formData.email,  // email -> business_email
+            phone: formData.phone,           // phone -> phone
+            office_adress: formData.adress,  // adress -> office_adress
+            role: "Partner",                 // Festwert "Partner"
+            // Die Supabase-Auth-ID wird beim ersten Login/Update über einen Trigger gesetzt.
+            // Wir lassen sie hier weg und verlassen uns auf die Business-Email als primäre Zuordnung.
+        }
+
+        const { error: userError } = await supabase
+            .from('users')
+            .insert([userData])
+            .select()
+
+        if (userError) {
+            // Loggen Sie den Fehler, aber verhindern Sie nicht das Anlegen des Partners
+            console.error('Warnung: Fehler beim Speichern in der users Tabelle:', userError);
+        }
+        // 🛑 ENDE NEUER EINTRAG 🛑
+
 
         alert(`Partner "${partnerData.name}" wurde angelegt und die E-Mail zum Passwort setzen wurde an ${authEmail} gesendet.`)
         
@@ -191,6 +214,9 @@ const PartnerModal = ({ isOpen, onClose }) => {
 // Ende der Modal-Komponente
 
 
+// -----------------------------------------------------------------------------
+// Hauptkomponente Projects
+// -----------------------------------------------------------------------------
 export default function Projects() {
   const [projects, setProjects] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -198,12 +224,12 @@ export default function Projects() {
   const [usersMap, setUsersMap] = useState({})
   const [statusFilter, setStatusFilter] = useState('')
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false) 
-  const [userRole, setUserRole] = useState(null) // NEU: State für die Rolle des eingeloggten Benutzers
-  const [loadingInitial, setLoadingInitial] = useState(true) // NEU: Lade-State für die initiale Rolle
+  const [userRole, setUserRole] = useState(null)
+  const [loadingInitial, setLoadingInitial] = useState(true)
 
   useEffect(() => {
     const fetchProjectsAndUserRole = async () => {
-      setLoadingInitial(true) // Setzen des Lade-States
+      setLoadingInitial(true)
 
       const { data: authUserData } = await supabase.auth.getUser()
       if (!authUserData?.user) {
@@ -215,12 +241,12 @@ export default function Projects() {
       // 1. Benutzerdaten (inkl. Rolle) abrufen
       const { data: currentUserData } = await supabase
         .from('users')
-        .select('id, leader, role') // WICHTIG: role hinzufügen
+        .select('id, leader, role')
         .eq('email', authEmail)
         .single()
       
       if (currentUserData) {
-        setUserRole(currentUserData.role) // Rolle speichern
+        setUserRole(currentUserData.role)
       } else {
         setUserRole(null)
       }
@@ -289,7 +315,7 @@ export default function Projects() {
         user_name: usersMapTemp[p.user_id] || '-'
       }))
       setProjects(finalProjects)
-      setLoadingInitial(false) // Beenden des Lade-States
+      setLoadingInitial(false)
     }
 
     fetchProjectsAndUserRole()
