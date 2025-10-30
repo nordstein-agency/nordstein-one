@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     const downloadFilename = filename ? filename : "Download.pdf";
     
     // 🚀 FINALE URL: Verwendet /getpublinkdownload, um ENOTFOUND/Log-in/linkid-Fehler auf dem API-Host zu beheben.
-    const finalDownloadUrl = `${apiUrl}/getpublinkdownload?code=${publinkCode}&linkid=${publinkId}&forcename=${encodeURIComponent(downloadFilename)}&access_token=${token}`;
+const finalDownloadUrl = `https://pub-7d.pcloud.com/getpublinkdownload?code=${publinkCode}&linkid=${publinkId}&forcename=${encodeURIComponent(downloadFilename)}`;
     
     res.setHeader('Content-Type', 'application/json');
     
