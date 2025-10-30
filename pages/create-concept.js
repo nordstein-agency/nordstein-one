@@ -1,3 +1,4 @@
+// pages/create-concept.js
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/router'
@@ -37,7 +38,7 @@ export default function CreateConcept() {
         })
 
       if (error) {
-        console.error("Fehler beim Laden der Templates:", error)
+        console.error('Fehler beim Laden der Templates:', error)
         setTemplates([])
         setLoading(false)
         return
@@ -64,123 +65,92 @@ export default function CreateConcept() {
     return <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">Lädt...</div>
   }
 
-
-
   // 🔹 Hauptfunktion
-const handleCreate = async () => {
-  try {
-    if (!customer) {
-      alert('Kunde nicht gefunden.')
-      return
-    }
+  const handleCreate = async () => {
+    try {
+      if (!customer) {
+        alert('Kunde nicht gefunden.')
+        return
+      }
 
-    if (selectedDocs.length === 0) {
-      alert('Bitte mindestens ein Dokument auswählen!')
-      return
-    }
+      if (selectedDocs.length === 0) {
+        alert('Bitte mindestens ein Dokument auswählen!')
+        return
+      }
 
-    // 1️⃣ Datei(en) in PCloud hochladen
-    const uploadRes = await fetch('/api/add-customer-docs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customerName: customer.name,
-        files: selectedDocs,
-      }),
-    })
-
-    const uploadResult = await uploadRes.json()
-    if (!uploadRes.ok) throw new Error(uploadResult.message)
-    console.log('✅ Upload abgeschlossen:', uploadResult)
-
-    const uploadedFile = uploadResult.uploadedFiles[0] // Name ohne .pdf (z.B. "Dienstleistungsvertrag")
-    const fileId = uploadResult.fileIds?.[0]
-    const folderId = uploadResult.folderId
-
-    if (!fileId || !folderId) {
-      alert('Fehler: Datei- oder Ordner-ID fehlt in der Upload-Antwort.')
-      console.error('❌ Ungültige Upload-Response:', uploadResult)
-      return
-    }
-const fullDocumentName = uploadedFile + '.pdf';
-    console.log('📂 Datei-Infos:', { uploadedFile, fileId, folderId })
-
-    // 2️⃣ Öffentlichen Link erzeugen und direkten Download-Link holen
-    const publinkRes = await fetch('/api/create-publink', {
+      // 1️⃣ Datei(en) in PCloud hochladen
+      const uploadRes = await fetch('/api/add-customer-docs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileid: fileId, filename: fullDocumentName }) // 💡 Dateiname mitgeben,
-    })
+        body: JSON.stringify({
+          customerName: customer.name,
+          files: selectedDocs,
+        }),
+      })
 
-    if (!publinkRes.ok) {
-        const errText = await publinkRes.text()
-        console.error('❌ /api/create-publink fehlgeschlagen:', errText)
-        alert('Fehler beim Erzeugen des öffentlichen Links.')
+      const uploadResult = await uploadRes.json()
+      if (!uploadRes.ok) throw new Error(uploadResult.message)
+      console.log('✅ Upload abgeschlossen:', uploadResult)
+
+      const uploadedFile = uploadResult.uploadedFiles[0] // Name ohne .pdf
+      const fileId = uploadResult.fileIds?.[0]
+      const folderId = uploadResult.folderId
+
+      if (!fileId || !folderId) {
+        alert('Fehler: Datei- oder Ordner-ID fehlt in der Upload-Antwort.')
+        console.error('❌ Ungültige Upload-Response:', uploadResult)
         return
-    }
+      }
 
-    const publinkData = await publinkRes.json()
-    console.log('📄 PublinkData:', publinkData)
+      const fullDocumentName = uploadedFile + '.pdf'
+      console.log('📂 Datei-Infos:', { uploadedFile, fileId, folderId })
 
+      // 2️⃣ Direktlink über getfilelink holen (statt Publink)
+      const getFileRes = await fetch(
+        `/api/get-pcloud-file?customerName=${encodeURIComponent(customer.name)}&documentName=${encodeURIComponent(fullDocumentName)}`
+      )
 
-    let fileUrlFinal = null;
-    
-    // Prüfen, ob der Backend-Code erfolgreich war und die finale URL zurückgegeben hat
-    if (publinkData.result === 0 && publinkData.final_url) { 
-        
-        // 💡 KORREKTUR START 💡
-        //const directDownloadUrl = publinkData.final_url; // Der direkte Link von getpublinkdownload
-        
-        const urlWithCorrectAmp = publinkData.final_url.replace(/&amp;/g, '&');
-        // Fügen Sie den 'forcename'-Parameter zur finalen URL hinzu, um den korrekten 
-        // Dateinamen und Content-Type im Browser zu erzwingen und die PDF lesbar zu machen.
-        fileUrlFinal = urlWithCorrectAmp;
-        
-        console.log('🔗 Finaler, direkter PDF-Link (mit forcename):', fileUrlFinal)
-        // 💡 KORREKTUR ENDE 💡
-        
-    } else {
-        alert('Fehler beim Erzeugen des direkten Download-Links. Prüfen Sie die Server-Logs.')
+      if (!getFileRes.ok) {
+        const errText = await getFileRes.text()
+        console.error('❌ /api/get-pcloud-file fehlgeschlagen:', errText)
+        alert('Fehler beim Erzeugen des Dateilinks.')
         return
+      }
+
+      const fileData = await getFileRes.json()
+      const fileUrlFinal = fileData.url
+      console.log('🔗 Direkter Dateilink (pCloud CDN):', fileUrlFinal)
+
+      // 3️⃣ Vertrag in Supabase direkt mit PDF-Link anlegen
+      const { data: contractData, error: insertError } = await supabase
+        .from('contracts')
+        .insert([
+          {
+            tarif: selectedConcept,
+            customer_id: customer.id,
+            user_id: customer.user_id,
+            state: 'Antrag',
+            pdf_url: fileUrlFinal, // 👈 direkter CDN-Link
+            document_name: fullDocumentName,
+          },
+        ])
+        .select('id')
+        .single()
+
+      if (insertError) throw insertError
+      console.log('📦 Neuer Vertrag erstellt:', contractData)
+
+      // 4️⃣ PDF-Editor öffnen
+      const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
+        customer.name
+      )}&folderId=${folderId}&documentName=${encodeURIComponent(fullDocumentName)}`
+
+      window.open(editorUrl, '_blank')
+    } catch (err) {
+      console.error('❌ Fehler in create-concept:', err)
+      alert(`Fehler beim Erstellen des Konzepts:\n${err?.message || err}`)
     }
-
-    
-    // 3️⃣ Vertrag in Supabase direkt mit PDF-Link anlegen
-    const { data: contractData, error: insertError } = await supabase
-      .from('contracts')
-      .insert([
-        {
-          tarif: selectedConcept,
-          customer_id: customer.id,
-          user_id: customer.user_id,
-          state: 'Antrag',
-          pdf_url: fileUrlFinal, // 👈 Jetzt den direkten, finalen Link speichern
-          document_name: fullDocumentName,
-        },
-      ])
-      .select('id')
-      .single()
-
-    if (insertError) throw insertError
-    console.log('📦 Neuer Vertrag erstellt:', contractData)
-
-    // 4️⃣ PDF-Editor öffnen
-    const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
-      customer.name
-    )}&folderId=${folderId}&documentName=${encodeURIComponent(uploadedFile + '.pdf')}`
-
-    window.open(editorUrl, '_blank')
-  } catch (err) {
-    console.error('❌ Fehler in create-concept:', err)
-    alert(`Fehler beim Erstellen des Konzepts:\n${err?.message || err}`)
   }
-}
-
-
-
-
-
-
 
   return (
     <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">
