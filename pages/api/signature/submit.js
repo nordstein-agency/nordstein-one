@@ -77,8 +77,17 @@ export default async function handler(req, res) {
     const fileUrl = contractData.pdf_url; 
     console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
     
+    // 🚀 NEUER FIX: Erzwinge die Nutzung des stabilen API-Hosts für den Download
+    const downloadHost = PCLOUD_API_URL.replace('https://', '');
+    let finalDownloadUrl = fileUrl.replace('publnk.pcloud.com', downloadHost);
+    
+    // Stelle sicher, dass der Link keine HTML-Entitäten enthält (zur Sicherheit)
+    finalDownloadUrl = finalDownloadUrl.replace(/&amp;/g, '&');
+    
+    console.log('🔗 FINALER Download-Link nach Host-Korrektur:', finalDownloadUrl);
+
     // Versuch, die Datei herunterzuladen
-    const fileResp = await fetch(fileUrl);
+    const fileResp = await fetch(finalDownloadUrl);
     
     if (!fileResp.ok) {
         console.error(`❌ Download failed, Link abgelaufen/ungültig: ${fileResp.status} ${fileResp.statusText}`);
