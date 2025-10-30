@@ -25,6 +25,9 @@ const euroStageMap = {
 // von PCloud zu vermeiden. Stattdessen öffnen wir den Link direkt im Browser,
 // der ihn korrekt als Download behandeln kann (da der Link mit &forcename 
 // in create-concept.js bereits optimiert wurde).
+
+
+/*
 const handleDownload = (pdfUrl, title = 'vertrag') => {
   if (!pdfUrl) {
     alert('Kein PDF für diesen Vertrag hinterlegt.')
@@ -59,7 +62,27 @@ const handleDownload = (pdfUrl, title = 'vertrag') => {
     alert('Fehler beim Herunterladen der PDF.')
   }
 }
+*/
 
+// contracts.js (Im Frontend, NICHT API)
+const handleDownload = (fileUrl) => {
+    // 1. Token entfernen (für Public Link Host)
+    let downloadUrl = fileUrl.replace(/&access_token=[^&]+/, '');
+    
+    // 2. Host umstellen (nutze den Public Link Host, da Browser ihn auflösen kann)
+    downloadUrl = downloadUrl.replace('eapi.pcloud.com', 'publnk.pcloud.com');
+    
+    // 3. Methode auf 'getpublink' umstellen (für Public Link Host)
+    downloadUrl = downloadUrl.replace('/getpublinkdownload', '/getpublink');
+    
+    // 4. Download erzwingen
+    if (!downloadUrl.includes('forcedownload=1')) {
+        downloadUrl += '&forcedownload=1';
+    }
+
+    console.log('🔗 Frontend Download URL:', downloadUrl);
+    window.open(downloadUrl, '_blank');
+}
 
 
 
