@@ -131,10 +131,10 @@ const fullDocumentName = uploadedFile + '.pdf';
         // 💡 KORREKTUR START 💡
         //const directDownloadUrl = publinkData.final_url; // Der direkte Link von getpublinkdownload
         
-        
+        const urlWithCorrectAmp = publinkData.final_url.replace(/&amp;/g, '&');
         // Fügen Sie den 'forcename'-Parameter zur finalen URL hinzu, um den korrekten 
         // Dateinamen und Content-Type im Browser zu erzwingen und die PDF lesbar zu machen.
-        fileUrlFinal = publinkData.final_url;
+        fileUrlFinal = urlWithCorrectAmp;
         
         console.log('🔗 Finaler, direkter PDF-Link (mit forcename):', fileUrlFinal)
         // 💡 KORREKTUR ENDE 💡
