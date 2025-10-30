@@ -1,16 +1,13 @@
-// /pages/api/signature/submit.js (KORRIGIERTE VERSION – Y-Achsen-Berechnung zentriert & korrekt)
+// /pages/api/signature/submit.js (FINAL KORRIGIERTE VERSION)
 import { supabase } from '../../../lib/supabaseClient';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-// ⚠️ DEAKTIVIERT: Wir verwenden den funktionierenden FormData-Code direkt
-// import { getFileLinkByPath, uploadFileBuffer, deleteFileByPath } from '../../../lib/pcloud'; 
 import { sha256 } from '../../../lib/hash';
 
-// ✅ NEUE IMPORTS FÜR DEN FORM-DATA UPLOAD
 import fetch from "node-fetch";
 import FormData from "form-data"; 
+const UAParser = require('ua-parser-js'); 
 
 async function getAccessToken() {
-  // hol den neuesten pCloud-Token aus deiner Tabelle
   const { data } = await supabase
     .from('pcloud_tokens')
     .select('access_token')
@@ -42,8 +39,7 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken();
     if (!accessToken) return res.status(500).json({ error: 'No pCloud token available' });
     
-    // 💡 HINWEIS: Wir brauchen den accessToken auch für den upload!
-    const PCLOUD_API_URL = process.env.PCLOUD_API_URL;
+    const PCLOUD_API_URL = process.env.PCLOUD_API_URL || "https://api.pcloud.com";
     if (!PCLOUD_API_URL) return res.status(500).json({ error: 'PCLOUD_API_URL not set' });
 
 
@@ -56,7 +52,6 @@ export default async function handler(req, res) {
     console.log('Signature Position (Session):', signature_position); 
 
     // 2) PDF-Template aus der Contracts-Tabelle holen
-    
     const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('pdf_url')
@@ -74,33 +69,36 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Original PDF download link not found in database.' });
     }
     
-    const fileUrl = contractData.pdf_url; 
+    let fileUrl = contractData.pdf_url; 
     console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
     
-    // 🚀 NEUER FIX: Erzwinge die Nutzung des stabilen API-Hosts für den Download
+    // 🚀 FIX: Erzwinge die Nutzung des stabilen API-Hosts und bereinige '&amp;'
     const downloadHost = PCLOUD_API_URL.replace('https://', '');
-    let finalDownloadUrl = fileUrl.replace('publnk.pcloud.com', downloadHost);
+    let finalDownloadUrl = fileUrl.replace('publnk.pcloud.com', downloadHost); // Behebt ENOTFOUND
+    finalDownloadUrl = finalDownloadUrl.replace(/&amp;/g, '&'); // Behebt Encoding-Probleme
     
-    // Stelle sicher, dass der Link keine HTML-Entitäten enthält (zur Sicherheit)
-    finalDownloadUrl = finalDownloadUrl.replace(/&amp;/g, '&');
+    // WICHTIG: Die URL MUSS den access_token enthalten, wenn sie über api.pcloud.com geht!
+    if (!finalDownloadUrl.includes('access_token=')) {
+        // Dies sollte nicht passieren, wenn create-publink.js korrekt ist, aber als Fallback
+        finalDownloadUrl += `&access_token=${accessToken}`;
+    }
     
     console.log('🔗 FINALER Download-Link nach Host-Korrektur:', finalDownloadUrl);
-
+    
     // Versuch, die Datei herunterzuladen
     const fileResp = await fetch(finalDownloadUrl);
     
     if (!fileResp.ok) {
         console.error(`❌ Download failed, Link abgelaufen/ungültig: ${fileResp.status} ${fileResp.statusText}`);
-        return res.status(500).json({ error: 'Failed to download PDF template (Link expired/invalid).' });
+        return res.status(500).json({ error: `Failed to download PDF template (Status: ${fileResp.status}).` });
     }
     const templateBytes = new Uint8Array(await fileResp.arrayBuffer());
 
     // 3) PDF bearbeiten: Unterschrift + Zeitstempel + Gerätedaten
     const pdfDoc = await PDFDocument.load(templateBytes);
     
-    // 💡 Seiten-Auswahl fixen: Sicherstellen, dass die Seite existiert
     const rawPageNumber = signature_position?.page || 1; 
-    const pageIndex = Math.max(0, rawPageNumber - 1); // 0-basierter Index
+    const pageIndex = Math.max(0, rawPageNumber - 1); 
     
     let page;
     if (pageIndex >= pdfDoc.getPageCount()) {
@@ -110,9 +108,7 @@ export default async function handler(req, res) {
         page = pdfDoc.getPage(pageIndex);
     }
     
-    // 🛑 NEU: Abrufen der tatsächlichen PDF-Abmessungen der Seite
     const { width: pageWidth, height: pageHeight } = page.getSize();
-    // 🛑 NEU: Der Bezugspunkt des Viewers
     const viewerPixelHeight = 900; 
 
     const pngBytes = Buffer.from(signatureBase64.split(',')[1], 'base64');
@@ -120,44 +116,38 @@ export default async function handler(req, res) {
     const pngDims = pngImage.scale(0.5);
 
     // ✅ NEUE SKALIERUNG: PROPORTIONAL UND GESPIGELT
-const rawX = signature_position?.x || 50;
-const rawY = signature_position?.y || 120;
+    const rawX = signature_position?.x || 50;
+    const rawY = signature_position?.y || 120;
 
-// 🧮 Bildschirmhöhen (vom Viewer)
-const viewerHeight = 900; // entspricht IFRAME_HEIGHT in PdfViewer
-// Die PDF-Seite selbst hat pageWidth × pageHeight Punkte
+    const viewerHeight = 900; 
+    
+    // X-Skalierung
+    const x = (rawX / pageWidth) * pageWidth; 
+    
+    // Y-Skalierung – Skalierung von Viewer-Koordinaten auf PDF-Koordinaten (unten)
+    const y = (rawY / viewerHeight) * pageHeight;
 
-// 1️⃣ X-Skalierung (proportional)
-const x = (rawX / pageWidth) * pageWidth; // identisch, falls iframe=volle Breite
+    // Zeichnen an der korrigierten Y-Position (mit leichter Zentrierung)
+    page.drawImage(pngImage, {
+      x,
+      y: y - pngDims.height / 2, 
+      width: pngDims.width,
+      height: pngDims.height,
+    });
 
-// 2️⃣ Y-Skalierung – wichtig: pdf-lib hat Ursprung unten, unser rawY ist ebenfalls „von unten“,
-// aber wir müssen das Seitenverhältnis des Viewers berücksichtigen.
-// Also invertieren wir den Faktor:
-const y = (rawY / viewerHeight) * pageHeight;
+    console.log(
+      `[FIXED POS] rawX=${rawX}, rawY=${rawY}, → x=${x.toFixed(2)}, y=${y.toFixed(2)}, pageHeight=${pageHeight}`
+    );
 
-// 3️⃣ Kein +/- pngDims.height – wir zeichnen exakt dort
-page.drawImage(pngImage, {
-  x,
-  y: y - pngDims.height / 2, // optional leichte Zentrierung
-  width: pngDims.width,
-  height: pngDims.height,
-});
-
-console.log(
-  `[FIXED POS] rawX=${rawX}, rawY=${rawY}, → x=${x.toFixed(2)}, y=${y.toFixed(2)}, pageHeight=${pageHeight}`
-);
-
-
-    // 🧭 DEBUGGING: Skalierte Werte anzeigen
-    console.log(`[SIGNATURE POS FINAL] Raw X/Y: ${rawX}/${rawY}. PageHeight: ${pageHeight.toFixed(2)}. Final X/Y: ${x.toFixed(2)}/${y.toFixed(2)}. Seite: ${rawPageNumber}`);
 
     // 4️⃣ Signatur zeichnen
-    page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
+    // ⚠️ HINWEIS: Dieser Draw-Aufruf ist ein Duplikat und muss entfernt werden, 
+    // er wurde aber aus dem ursprünglichen Code kopiert:
+    // page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
     // Zeitstempel + Geräteinfos
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const ts = new Date();
-    const UAParser = require('ua-parser-js'); 
     const parser = new UAParser(userAgent || '');
     const ua = parser.getResult();
     const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
@@ -185,8 +175,6 @@ console.log(
         ? document_name.replace(/\.pdf$/i, `${signedSuffix}.pdf`)
         : `${document_name}${signedSuffix}.pdf`;
 
-    // 5) Alte Datei optional löschen (wird hier ignoriert)
-    
     // 6) Neue Datei hochladen (KORRIGIERT MIT FORM-DATA)
     const folderIdForPcloud = folder_id ? Number(folder_id) : null; 
 
@@ -195,7 +183,6 @@ console.log(
         return res.status(400).json({ error: 'Missing or invalid pCloud folder ID for upload.' });
     }
     
-    // ✅ NEUER UPLOAD-MECHANISMUS (Funktioniert wie in add-customer-docs.js)
     const form = new FormData();
     form.append("file", Buffer.from(finalBytes), signedName); 
 
@@ -207,8 +194,7 @@ console.log(
     });
 
     const uploaded = await uploadResp.json();
-    // ----------------------------------------------------------------------
-
+    
     // 🛑 EXAKTE FEHLERPRÜFUNG:
     if (!uploaded || uploaded.result !== 0) {
         console.error('❌ PCloud UPLOAD FAILED! Reason:', uploaded); 
@@ -216,7 +202,7 @@ console.log(
         return res.status(500).json({ error: 'Failed to upload signed PDF to pCloud.' });
     }
 
-    const fileId = uploaded.metadata?.[0]?.fileid ? Number(uploaded.metadata[0].fileid) : null; // Zugriff angepasst
+    const fileId = uploaded.metadata?.[0]?.fileid ? Number(uploaded.metadata[0].fileid) : null; 
 
     // 7) Signatur in passender Tabelle speichern
     const device_info = {

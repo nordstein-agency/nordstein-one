@@ -1,4 +1,4 @@
-// pages/api/create-publink.js - Final korrigiert
+// pages/api/create-publink.js - Final korrigierte Version
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
@@ -11,19 +11,20 @@ export default async function handler(req, res) {
     }
 
     // --- 1. Setup und Token-Check ---
+    // Verwende den stabilen API-Host für alle API-Interaktionen
     const apiUrl = process.env.PCLOUD_API_URL || "https://api.pcloud.com"; 
     const token = process.env.PCLOUD_ACCESS_TOKEN || process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN; 
     if (!token) {
       return res.status(500).json({ error: "Access Token fehlt" });
     }
 
-    // ... (Code für getfilepublink bleibt unverändert, wie zuletzt korrigiert) ...
+    // --- getfilepublink Aufruf ---
+    // Token wird im Query-String gesendet (behebt Authentifizierungsfehler)
     const publinkUrl = `${apiUrl}/getfilepublink?fileid=${fileid}&access_token=${token}`;
     let response = await fetch(publinkUrl, { 
         method: "POST",
-        headers: { 'Connection': 'close' }
+        headers: { 'Connection': 'close' } // Fix für "socket hang up"
     });
-    // ... (restliche Fehlerbehandlung und Code-Extraktion)
     
     let text = await response.text();
     let publinkData;
@@ -42,13 +43,13 @@ export default async function handler(req, res) {
     }
 
     // --- 2. Finale Download-URL generieren ---
-    
-    // 💡 KORREKTUR: Verwende den übergebenen Dateinamen. Standard-Fallback ist 'Download.pdf'.
     const downloadFilename = filename ? filename : "Download.pdf";
     
-    // Baue die URL einmalig und fehlerfrei zusammen.
-const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&forcedownload=1&forcename=${encodeURIComponent(downloadFilename)}`;    
-    // Gib die URL zurück
+    // 🚀 FINALE URL: Nutzt den stabilen API-Host, Public Link Code UND Access Token
+    const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&forcedownload=1&forcename=${encodeURIComponent(downloadFilename)}&access_token=${token}`;
+    
+    res.setHeader('Content-Type', 'application/json'); // Fix für Encoding-Probleme
+    
     return res.status(200).json({ 
         result: 0, 
         code: publinkCode,
@@ -57,6 +58,6 @@ const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&forcedownload
 
   } catch (err) {
     console.error("❌ Allgemeiner Fehler in /api/create-publink:", err);
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 }
