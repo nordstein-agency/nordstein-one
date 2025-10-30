@@ -73,15 +73,10 @@ export default async function handler(req, res) {
     console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
     
     // 🚀 FIX: Erzwinge die Nutzung des stabilen API-Hosts und bereinige '&amp;'
+    // Dies behebt den ENOTFOUND-Fehler und funktioniert nun, da der Link linkid, code & token enthält.
     const downloadHost = PCLOUD_API_URL.replace('https://', '');
-    let finalDownloadUrl = fileUrl.replace('publnk.pcloud.com', downloadHost); // Behebt ENOTFOUND
-    finalDownloadUrl = finalDownloadUrl.replace(/&amp;/g, '&'); // Behebt Encoding-Probleme
-    
-    // WICHTIG: Die URL MUSS den access_token enthalten, wenn sie über api.pcloud.com geht!
-    if (!finalDownloadUrl.includes('access_token=')) {
-        // Dies sollte nicht passieren, wenn create-publink.js korrekt ist, aber als Fallback
-        finalDownloadUrl += `&access_token=${accessToken}`;
-    }
+    let finalDownloadUrl = fileUrl.replace('publnk.pcloud.com', downloadHost); 
+    finalDownloadUrl = finalDownloadUrl.replace(/&amp;/g, '&'); 
     
     console.log('🔗 FINALER Download-Link nach Host-Korrektur:', finalDownloadUrl);
     
@@ -115,7 +110,7 @@ export default async function handler(req, res) {
     const pngImage = await pdfDoc.embedPng(pngBytes);
     const pngDims = pngImage.scale(0.5);
 
-    // ✅ NEUE SKALIERUNG: PROPORTIONAL UND GESPIGELT
+    // ✅ NEUE SKALIERUNG
     const rawX = signature_position?.x || 50;
     const rawY = signature_position?.y || 120;
 
@@ -124,7 +119,7 @@ export default async function handler(req, res) {
     // X-Skalierung
     const x = (rawX / pageWidth) * pageWidth; 
     
-    // Y-Skalierung – Skalierung von Viewer-Koordinaten auf PDF-Koordinaten (unten)
+    // Y-Skalierung
     const y = (rawY / viewerHeight) * pageHeight;
 
     // Zeichnen an der korrigierten Y-Position (mit leichter Zentrierung)
@@ -139,11 +134,6 @@ export default async function handler(req, res) {
       `[FIXED POS] rawX=${rawX}, rawY=${rawY}, → x=${x.toFixed(2)}, y=${y.toFixed(2)}, pageHeight=${pageHeight}`
     );
 
-
-    // 4️⃣ Signatur zeichnen
-    // ⚠️ HINWEIS: Dieser Draw-Aufruf ist ein Duplikat und muss entfernt werden, 
-    // er wurde aber aus dem ursprünglichen Code kopiert:
-    // page.drawImage(pngImage, { x, y, width: pngDims.width, height: pngDims.height });
 
     // Zeitstempel + Geräteinfos
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
