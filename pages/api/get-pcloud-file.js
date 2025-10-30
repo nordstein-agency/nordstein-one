@@ -1,4 +1,4 @@
-// pages/api/get-pcloud-file.js
+// /pages/api/get-pcloud-file.js (GEFIXT)
 export default async function handler(req, res) {
   const { customerName, documentName } = req.query;
 
@@ -28,12 +28,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // 🚀 Hier liegt der entscheidende Unterschied:
-    // Wir erzwingen den öffentlichen CDN-Link mit "https://<host><path>"
-    const host = data.hosts[0].startsWith('c') 
-      ? data.hosts[0] 
-      : `c${data.hosts[0]}`; // fallback
-
+    // ✅ Keine Manipulation des Hostnamens mehr!
+    const host = data.hosts[0];
     const fullUrl = `https://${host}${data.path}`;
 
     console.log("✅ Finaler, stabiler CDN-Link:", fullUrl);

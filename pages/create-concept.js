@@ -65,86 +65,99 @@ export default function CreateConcept() {
     return <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">Lädt...</div>
   }
 
-  // 🔹 Hauptfunktion
-  const handleCreate = async () => {
-    try {
-      if (!customer) {
-        alert('Kunde nicht gefunden.')
-        return
-      }
 
-      if (selectedDocs.length === 0) {
-        alert('Bitte mindestens ein Dokument auswählen!')
-        return
-      }
-
-      // 1️⃣ Datei(en) in PCloud hochladen
-      const uploadRes = await fetch('/api/add-customer-docs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: customer.name,
-          files: selectedDocs,
-        }),
-      })
-
-      const uploadResult = await uploadRes.json()
-      if (!uploadRes.ok) throw new Error(uploadResult.message)
-      console.log('✅ Upload abgeschlossen:', uploadResult)
-
-      const uploadedFile = uploadResult.uploadedFiles[0]
-      const folderId = uploadResult.folderId
-      const fullDocumentName = uploadedFile + '.pdf'
-
-      console.log('📂 Datei-Infos:', { uploadedFile, folderId })
-
-      // 2️⃣ Direkten, stabilen CDN-Link über get-pcloud-file holen
-      const getFileRes = await fetch(
-        `/api/get-pcloud-file?customerName=${encodeURIComponent(
-          customer.name
-        )}&documentName=${encodeURIComponent(fullDocumentName)}`
-      )
-
-      if (!getFileRes.ok) {
-        const errText = await getFileRes.text()
-        console.error('❌ /api/get-pcloud-file fehlgeschlagen:', errText)
-        alert('Fehler beim Erzeugen des Dateilinks.')
-        return
-      }
-
-      const fileData = await getFileRes.json()
-      const fileUrlFinal = fileData.url
-      console.log('🔗 Stabiler CDN-Link:', fileUrlFinal)
-
-      // 3️⃣ Vertrag in Supabase anlegen
-      const { data: contractData, error: insertError } = await supabase
-        .from('contracts')
-        .insert([
-          {
-            tarif: selectedConcept,
-            customer_id: customer.id,
-            user_id: customer.user_id,
-            state: 'Antrag',
-            pdf_url: fileUrlFinal,
-            document_name: fullDocumentName,
-          },
-        ])
-        .select('id')
-        .single()
-
-      if (insertError) throw insertError
-      console.log('📦 Neuer Vertrag erstellt:', contractData)
-
-      // 4️⃣ PDF-Editor öffnen
-      const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
-        customer.name
-      )}&folderId=${folderId}&documentName=${encodeURIComponent(fullDocumentName)}`
-      window.open(editorUrl, '_blank')
-    } catch (err) {
-      console.error('❌ Fehler in create-concept:', err)
-      alert(`Fehler beim Erstellen des Konzepts:\n${err?.message || err}`)
+// 🔹 Hauptfunktion
+const handleCreate = async () => {
+  try {
+    if (!customer) {
+      alert('Kunde nicht gefunden.')
+      return
     }
+
+    if (selectedDocs.length === 0) {
+      alert('Bitte mindestens ein Dokument auswählen!')
+      return
+    }
+
+    // 1️⃣ Datei(en) in PCloud hochladen
+    const uploadRes = await fetch('/api/add-customer-docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerName: customer.name,
+        files: selectedDocs,
+      }),
+    })
+
+    const uploadResult = await uploadRes.json()
+    if (!uploadRes.ok) throw new Error(uploadResult.message)
+    console.log('✅ Upload abgeschlossen:', uploadResult)
+
+    const uploadedFile = uploadResult.uploadedFiles[0]
+    const folderId = uploadResult.folderId
+    const fullDocumentName = uploadedFile + '.pdf'
+
+    console.log('📂 Datei-Infos:', { uploadedFile, folderId })
+
+    // 2️⃣ Stabilen, serverseitigen Direktlink über neue API holen
+    const directRes = await fetch(
+      `/api/get-direct-link?path=${encodeURIComponent(
+        `/customers/${customer.name}/${fullDocumentName}`
+      )}`
+    )
+
+    if (!directRes.ok) {
+      const errText = await directRes.text()
+      console.error('❌ /api/get-direct-link fehlgeschlagen:', errText)
+      alert('Fehler beim Erzeugen des direkten Download-Links.')
+      return
+    }
+
+    const directData = await directRes.json()
+    if (!directData.ok || !directData.directUrl) {
+      console.error('❌ Ungültige Antwort von get-direct-link:', directData)
+      alert('Fehler beim Erzeugen des direkten Download-Links (2).')
+      return
+    }
+
+    const fileUrlFinal = directData.directUrl
+    console.log('🔗 Stabiler Direktlink (CDN-Link):', fileUrlFinal)
+
+    // 3️⃣ Vertrag in Supabase anlegen
+    const { data: contractData, error: insertError } = await supabase
+      .from('contracts')
+      .insert([
+        {
+          tarif: selectedConcept,
+          customer_id: customer.id,
+          user_id: customer.user_id,
+          state: 'Antrag',
+          pdf_url: fileUrlFinal,
+          document_name: fullDocumentName,
+        },
+      ])
+      .select('id')
+      .single()
+
+    if (insertError) throw insertError
+    console.log('📦 Neuer Vertrag erstellt:', contractData)
+
+    // 4️⃣ PDF-Editor öffnen
+    const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
+      customer.name
+    )}&folderId=${folderId}&documentName=${encodeURIComponent(fullDocumentName)}`
+    window.open(editorUrl, '_blank')
+  } catch (err) {
+    console.error('❌ Fehler in create-concept:', err)
+    alert(`Fehler beim Erstellen des Konzepts:\n${err?.message || err}`)
   }
+}
+
+
+
+
+
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">

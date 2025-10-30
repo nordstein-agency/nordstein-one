@@ -44,7 +44,8 @@ export default function PdfEditor() {
           // 2️⃣ Verwende internen Proxy
           const proxyUrl = `/api/proxy-pdf?url=${encodeURIComponent(data.url)}`;
           console.log('✅ Proxy-Link verwendet:', proxyUrl);
-          setFileUrl(proxyUrl);
+          //setFileUrl(proxyUrl);
+          setFileUrl(data.url); // Direktlink verwenden
           setError(null);
           return true; // Erfolgreich geladen
         } 
