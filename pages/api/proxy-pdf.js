@@ -3,49 +3,38 @@ export default async function handler(req, res) {
   const { url } = req.query;
 
   if (!url) {
-    return res.status(400).json({ error: "Missing url parameter" });
+    return res.status(400).json({ error: "Missing URL parameter" });
   }
 
   try {
-    console.log("🔗 Starte Proxy-Download von:", url);
+    console.log("🌍 Starte Proxy-Abruf:", url);
 
-    // ⚠️ Timeout verhindern (Standard-Node-Fetch hat keinen Timeout)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    // 🔹 Manche pCloud-Links brauchen 'no-cors' / user-agent, daher:
+    // 🔹 Datei von pCloud abrufen (dein Server-IP → kein IP-Mismatch mehr)
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Next.js Server)",
+        // Optional: Authentifizierung, falls erforderlich
+        Authorization: `Bearer ${process.env.PCLOUD_ACCESS_TOKEN}`,
       },
-      signal: controller.signal,
     });
-
-    clearTimeout(timeout);
-
-    console.log("📡 Response Status:", response.status);
-    console.log("📡 Response Headers:", Object.fromEntries(response.headers));
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("❌ Response Body:", text.slice(0, 500));
-      return res
-        .status(response.status)
-        .json({ error: "Failed to fetch PDF from pCloud", status: response.status });
+      console.error("❌ pCloud-Fehler:", text);
+      return res.status(response.status).json({ error: text });
     }
 
-    // 🔸 Stream direkt an den Client weiter
-    res.setHeader("Content-Type", "application/pdf");
+    // 🔹 Content-Type weitergeben (z. B. application/pdf)
+    const contentType = response.headers.get("content-type") || "application/pdf";
+    res.setHeader("Content-Type", contentType);
 
-    const buffer = Buffer.from(await response.arrayBuffer());
-    res.send(buffer);
+    // 🔹 Daten streamen
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.status(200).send(buffer);
   } catch (err) {
-    console.error("❌ Proxy-Fehler (fetch failed):", err);
-    res.status(500).json({
-      error: "fetch failed",
-      message: err.message,
-      stack: err.stack,
-    });
+    console.error("❌ Proxy-Fehler:", err);
+    res.status(500).json({ error: err.message });
   }
 }
