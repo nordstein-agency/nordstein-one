@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const publinkUrl = `${apiUrl}/getfilepublink?fileid=${fileid}&access_token=${token}`;
     let response = await fetch(publinkUrl, { 
         method: "POST",
-        headers: { 'Connection': 'close' }
+        headers: { 'Connection': 'close' } // Fix für "socket hang up"
     });
     
     let text = await response.text();
@@ -49,8 +49,8 @@ export default async function handler(req, res) {
     // --- 2. Finale Download-URL generieren ---
     const downloadFilename = filename ? filename : "Download.pdf";
     
-    // 🚀 FINALE URL: Fügt linkid hinzu, um den Fehler "please provide link id" auf api.pcloud.com zu beheben
-    const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&linkid=${publinkId}&forcedownload=1&forcename=${encodeURIComponent(downloadFilename)}&access_token=${token}`;
+    // 🚀 FINALE URL: Verwendet /getpublinkdownload, um ENOTFOUND/Log-in/linkid-Fehler auf dem API-Host zu beheben.
+    const finalDownloadUrl = `${apiUrl}/getpublinkdownload?code=${publinkCode}&linkid=${publinkId}&forcename=${encodeURIComponent(downloadFilename)}&access_token=${token}`;
     
     res.setHeader('Content-Type', 'application/json');
     
