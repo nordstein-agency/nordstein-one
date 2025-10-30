@@ -1,4 +1,4 @@
-// pages/api/create-publink.js - KORRIGIERT FÜR IP-UNABHÄNGIGEN DOWNLOAD & AUTHENTIFIZIERUNG
+// pages/api/create-publink.js - Final korrigierte Version
 
 import fetch from "node-fetch";
 
@@ -9,7 +9,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "fileid fehlt" });
     }
 
-    const apiUrl = process.env.PCLOUD_API_URL || "https://eapi.pcloud.com"; 
+    // 💡 Korrektur 1: Verwende api.pcloud.com als Standard-Host, um Stabilität zu erhöhen
+    const apiUrl = process.env.PCLOUD_API_URL || "https://api.pcloud.com"; 
+    
     // Nutzen Sie den Access Token aus den Umgebungsvariablen
     const token = process.env.PCLOUD_ACCESS_TOKEN || process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN; 
     if (!token) {
@@ -17,22 +19,19 @@ export default async function handler(req, res) {
     }
 
     // 1. Publink Code abrufen/erstellen (getfilepublink)
-    // ⚠️ KORREKTUR: access_token aus der URL ENTFERNEN.
-    const publinkUrl = `${apiUrl}/getfilepublink`;
-    console.log("📤 1. Hole/Erstelle Publink Code (URL ohne Token):", publinkUrl);
+    // ⚠️ Rückkehr zur funktionierenden URL-Struktur (Token im Query-String)
+    const publinkUrl = `${apiUrl}/getfilepublink?fileid=${fileid}&access_token=${token}`;
+    console.log("📤 1. Hole/Erstelle Publink Code:", publinkUrl);
 
     let response = await fetch(publinkUrl, { 
         method: "POST",
-        // 💡 KORREKTUR: Token im JSON Body senden, um den "Log in required" Fehler bei POST zu beheben
+        // 💡 Korrektur 2: Füge Connection: close hinzu, um den "socket hang up" Fehler zu beheben
         headers: {
-            'Content-Type': 'application/json', 
-        },
-        body: JSON.stringify({ 
-            fileid: fileid, 
-            access_token: token // Token wird hier korrekt im Body gesendet
-        })
+            'Connection': 'close' 
+        }
+        // Body bleibt leer, da alle Parameter in der URL sind
     });
-
+    
     let text = await response.text();
     
     let publinkData;
@@ -59,14 +58,12 @@ export default async function handler(req, res) {
     }
 
     // 2. Erzeuge die finale, client-taugliche Download-URL.
-    // Wir verwenden getpublink, was IP-unabhängig ist.
-    // 'forcedownload=1' stellt sicher, dass der Browser die Datei herunterlädt (Content-Disposition: attachment).
-    
+    // Beibehalten des IP-unabhängigen Fixes
     const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&fileid=${fileid}&forcedownload=1`;
     
     console.log("✅ Finaler Download-Link generiert (IP-unabhängig):", finalDownloadUrl);
     
-    // Wir geben die finale URL an den Client zurück, damit dieser den Download starten kann (window.location.href)
+    // Wir geben die finale URL an den Client zurück
     return res.status(200).json({ 
         result: 0, 
         code: publinkCode,
