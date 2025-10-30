@@ -109,7 +109,7 @@ const fullDocumentName = uploadedFile + '.pdf';
     const publinkRes = await fetch('/api/create-publink', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileid: fileId }),
+        body: JSON.stringify({ fileid: fileId, filename: fullDocumentName }) // 💡 Dateiname mitgeben,
     })
 
     if (!publinkRes.ok) {
@@ -129,12 +129,12 @@ const fullDocumentName = uploadedFile + '.pdf';
     if (publinkData.result === 0 && publinkData.final_url) { 
         
         // 💡 KORREKTUR START 💡
-        const directDownloadUrl = publinkData.final_url; // Der direkte Link von getpublinkdownload
+        //const directDownloadUrl = publinkData.final_url; // Der direkte Link von getpublinkdownload
         
         
         // Fügen Sie den 'forcename'-Parameter zur finalen URL hinzu, um den korrekten 
         // Dateinamen und Content-Type im Browser zu erzwingen und die PDF lesbar zu machen.
-        fileUrlFinal = `${directDownloadUrl}?forcename=${encodeURIComponent(fullDocumentName)}`;
+        fileUrlFinal = publinkData.final_url;
         
         console.log('🔗 Finaler, direkter PDF-Link (mit forcename):', fileUrlFinal)
         // 💡 KORREKTUR ENDE 💡
