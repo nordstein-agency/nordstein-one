@@ -3,7 +3,6 @@ import fetch from "node-fetch";
 
 export default async function handler(req, res) {
   try {
-    // 💡 NEU: Erfasse den Dateinamen aus dem Request-Body
     const { fileid, filename } = req.body; 
     
     if (!fileid) {
@@ -11,7 +10,6 @@ export default async function handler(req, res) {
     }
 
     // --- 1. Setup und Token-Check ---
-    // Verwende den stabilen API-Host für alle API-Interaktionen
     const apiUrl = process.env.PCLOUD_API_URL || "https://api.pcloud.com"; 
     const token = process.env.PCLOUD_ACCESS_TOKEN || process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN; 
     if (!token) {
@@ -19,11 +17,10 @@ export default async function handler(req, res) {
     }
 
     // --- getfilepublink Aufruf ---
-    // Token wird im Query-String gesendet (behebt Authentifizierungsfehler)
     const publinkUrl = `${apiUrl}/getfilepublink?fileid=${fileid}&access_token=${token}`;
     let response = await fetch(publinkUrl, { 
         method: "POST",
-        headers: { 'Connection': 'close' } // Fix für "socket hang up"
+        headers: { 'Connection': 'close' }
     });
     
     let text = await response.text();
@@ -37,18 +34,25 @@ export default async function handler(req, res) {
       console.error("❌ Publink-Erstellung fehlgeschlagen:", publinkData.error);
       return res.status(500).json({ error: publinkData.error, pCloudResult: publinkData.result });
     }
-    let publinkCode = publinkData.code || (Array.isArray(publinkData.publinks) && publinkData.publinks.length > 0 ? publinkData.publinks[0].code : null);
-    if (!publinkCode) {
-      return res.status(500).json({ error: "Publink Code konnte nicht extrahiert werden." });
+
+    // 🚀 KORREKTUR: Extrahiere code UND linkid
+    let publinkCode = publinkData.code 
+      || (Array.isArray(publinkData.publinks) && publinkData.publinks.length > 0 ? publinkData.publinks[0].code : null);
+    
+    let publinkId = publinkData.linkid 
+      || (Array.isArray(publinkData.publinks) && publinkData.publinks.length > 0 ? publinkData.publinks[0].linkid : null);
+    
+    if (!publinkCode || !publinkId) {
+      return res.status(500).json({ error: "Publink Code oder ID (linkid) konnte nicht aus der pCloud Antwort extrahiert werden." });
     }
 
     // --- 2. Finale Download-URL generieren ---
     const downloadFilename = filename ? filename : "Download.pdf";
     
-    // 🚀 FINALE URL: Nutzt den stabilen API-Host, Public Link Code UND Access Token
-    const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&forcedownload=1&forcename=${encodeURIComponent(downloadFilename)}&access_token=${token}`;
+    // 🚀 FINALE URL: Fügt linkid hinzu, um den Fehler "please provide link id" auf api.pcloud.com zu beheben
+    const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&linkid=${publinkId}&forcedownload=1&forcename=${encodeURIComponent(downloadFilename)}&access_token=${token}`;
     
-    res.setHeader('Content-Type', 'application/json'); // Fix für Encoding-Probleme
+    res.setHeader('Content-Type', 'application/json');
     
     return res.status(200).json({ 
         result: 0, 
