@@ -8,7 +8,6 @@ export default async function handler(req, res) {
 
   try {
     const cleanDocName = documentName.replace(/\.pdf$/i, "");
-
     const apiUrl = `${process.env.PCLOUD_API_URL}/getfilelink?path=/customers/${encodeURIComponent(
       customerName
     )}/${encodeURIComponent(cleanDocName)}.pdf&access_token=${
@@ -22,17 +21,22 @@ export default async function handler(req, res) {
 
     console.log("📡 pCloud-Response:", data);
 
-    // ✅ Prüfen, ob gültige Antwort da ist
-    if (data.result !== 0 || (!data.path && !data.hosts?.length)) {
+    if (data.result !== 0 || !data.path || !data.hosts?.length) {
       return res.status(500).json({
         error: data.error || "pCloud API Error",
         debug: data,
       });
     }
 
-    // ✅ pCloud liefert "hosts" statt "host"
-    const host = data.hosts?.[0];
+    // 🚀 Hier liegt der entscheidende Unterschied:
+    // Wir erzwingen den öffentlichen CDN-Link mit "https://<host><path>"
+    const host = data.hosts[0].startsWith('c') 
+      ? data.hosts[0] 
+      : `c${data.hosts[0]}`; // fallback
+
     const fullUrl = `https://${host}${data.path}`;
+
+    console.log("✅ Finaler, stabiler CDN-Link:", fullUrl);
 
     res.status(200).json({ url: fullUrl });
   } catch (err) {
