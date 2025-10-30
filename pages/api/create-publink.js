@@ -1,5 +1,4 @@
 // pages/api/create-publink.js - Final korrigierte Version
-
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
@@ -9,27 +8,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "fileid fehlt" });
     }
 
-    // 💡 Korrektur 1: Verwende api.pcloud.com als Standard-Host, um Stabilität zu erhöhen
+    // Verwende api.pcloud.com als stabilen Standard-Host für API-Aufrufe
     const apiUrl = process.env.PCLOUD_API_URL || "https://api.pcloud.com"; 
     
-    // Nutzen Sie den Access Token aus den Umgebungsvariablen
+    // Token-Handling
     const token = process.env.PCLOUD_ACCESS_TOKEN || process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN; 
     if (!token) {
       return res.status(500).json({ error: "Access Token fehlt" });
     }
 
     // 1. Publink Code abrufen/erstellen (getfilepublink)
-    // ⚠️ Rückkehr zur funktionierenden URL-Struktur (Token im Query-String)
+    // Token wird im Query-String gesendet, was für diesen Endpunkt zu funktionieren scheint.
     const publinkUrl = `${apiUrl}/getfilepublink?fileid=${fileid}&access_token=${token}`;
     console.log("📤 1. Hole/Erstelle Publink Code:", publinkUrl);
 
     let response = await fetch(publinkUrl, { 
         method: "POST",
-        // 💡 Korrektur 2: Füge Connection: close hinzu, um den "socket hang up" Fehler zu beheben
+        // Hinzufügen von Connection: close behebt den "socket hang up" Fehler in Serverless-Umgebungen
         headers: {
             'Connection': 'close' 
         }
-        // Body bleibt leer, da alle Parameter in der URL sind
     });
     
     let text = await response.text();
@@ -49,7 +47,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Code-Extraktion: Nimmt den direkten 'code' oder den Code aus dem 'publinks'-Array
+    // Code-Extraktion
     let publinkCode = publinkData.code 
       || (Array.isArray(publinkData.publinks) && publinkData.publinks.length > 0 ? publinkData.publinks[0].code : null);
     
@@ -58,12 +56,13 @@ export default async function handler(req, res) {
     }
 
     // 2. Erzeuge die finale, client-taugliche Download-URL.
-    // Beibehalten des IP-unabhängigen Fixes
-    const finalDownloadUrl = `${apiUrl}/getpublink?code=${publinkCode}&fileid=${fileid}&forcedownload=1`;
+    // 🚀 NEU: Verwende den stabilen Download-Host publnk.pcloud.com nur mit dem Code.
+    // Dies behebt den Fehler "Please provide 'linkid'." und ist IP-unabhängig.
+    const finalDownloadUrl = `https://publnk.pcloud.com/getpublink?code=${publinkCode}&forcedownload=1`;
     
-    console.log("✅ Finaler Download-Link generiert (IP-unabhängig):", finalDownloadUrl);
+    console.log("✅ Finaler Download-Link generiert (Direkt-Host):", finalDownloadUrl);
     
-    // Wir geben die finale URL an den Client zurück
+    // Gib die finale URL an den Client zurück, damit dieser den Download starten kann (window.location.href)
     return res.status(200).json({ 
         result: 0, 
         code: publinkCode,
