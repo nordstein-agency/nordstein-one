@@ -1,4 +1,4 @@
-// pages/api/create-publink.js - KORRIGIERT FÜR IP-UNABHÄNGIGEN DOWNLOAD
+// pages/api/create-publink.js - KORRIGIERT FÜR IP-UNABHÄNGIGEN DOWNLOAD & AUTHENTIFIZIERUNG
 
 import fetch from "node-fetch";
 
@@ -6,22 +6,33 @@ export default async function handler(req, res) {
   try {
     const { fileid } = req.body;
     if (!fileid) {
-        return res.status(400).json({ error: "fileid fehlt" });
+      return res.status(400).json({ error: "fileid fehlt" });
     }
 
     const apiUrl = process.env.PCLOUD_API_URL || "https://eapi.pcloud.com"; 
     // Nutzen Sie den Access Token aus den Umgebungsvariablen
     const token = process.env.PCLOUD_ACCESS_TOKEN || process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN; 
     if (!token) {
-        return res.status(500).json({ error: "Access Token fehlt" });
+      return res.status(500).json({ error: "Access Token fehlt" });
     }
 
     // 1. Publink Code abrufen/erstellen (getfilepublink)
-    // Dieser Aufruf generiert den publinkCode, falls er noch nicht existiert.
-    const publinkUrl = `${apiUrl}/getfilepublink?fileid=${fileid}&access_token=${token}`;
-    console.log("📤 1. Hole/Erstelle Publink Code:", publinkUrl);
-    
-    let response = await fetch(publinkUrl, { method: "POST" });
+    // ⚠️ KORREKTUR: access_token aus der URL ENTFERNEN.
+    const publinkUrl = `${apiUrl}/getfilepublink`;
+    console.log("📤 1. Hole/Erstelle Publink Code (URL ohne Token):", publinkUrl);
+
+    let response = await fetch(publinkUrl, { 
+        method: "POST",
+        // 💡 KORREKTUR: Token im JSON Body senden, um den "Log in required" Fehler bei POST zu beheben
+        headers: {
+            'Content-Type': 'application/json', 
+        },
+        body: JSON.stringify({ 
+            fileid: fileid, 
+            access_token: token // Token wird hier korrekt im Body gesendet
+        })
+    });
+
     let text = await response.text();
     
     let publinkData;
