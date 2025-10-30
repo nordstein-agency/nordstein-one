@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const { fileid, filename } = req.body
     if (!fileid) return res.status(400).json({ error: "fileid fehlt" })
 
-    const apiUrl = "https://api.pcloud.com"
+    const apiUrl = process.env.PCLOUD_API_URL || "https://eapi.pcloud.com"
     const token = process.env.PCLOUD_ACCESS_TOKEN || process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN
     if (!token) return res.status(500).json({ error: "Access Token fehlt" })
 
