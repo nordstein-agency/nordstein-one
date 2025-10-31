@@ -51,12 +51,14 @@ export default async function handler(req, res) {
     console.log('DocumentName (Session):', document_name); 
     console.log('Signature Position (Session):', signature_position); 
 
+    const cleanDocName = document_name.replace(/^\/customers\/[^/]+\//, '').replace(/^\//, '');
+
     // 2) PDF-Template aus der Contracts-Tabelle holen
     const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('pdf_url')
         .eq('customer_id', customer_id) 
-        .eq('document_name', document_name)
+        .eq('document_name', cleanDocName)
         .maybeSingle();
     
     if (contractError) {
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Database query failed for PDF link.' });
     }
     
+    console.log('Gefundene Vertragsdaten:', contractData.pdf_url);
     if (!contractData?.pdf_url) {
         console.error(`Link fehlt für customer_id: ${customer_id} und document: ${document_name}`);
         return res.status(404).json({ error: 'Original PDF download link not found in database.' });
@@ -214,7 +217,7 @@ if (fileUrl.startsWith('/customers/')) {
     const uploadUrl = `${PCLOUD_API_URL}/uploadfile?folderid=${folderIdForPcloud}&access_token=${accessToken}&renameifexists=0`;
 
 
-    
+
     const uploadResp = await fetch(uploadUrl, {
       method: "POST",
       body: form,
