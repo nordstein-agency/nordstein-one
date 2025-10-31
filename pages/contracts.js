@@ -462,12 +462,15 @@ const handleEditPdf = async (contract) => {
   // Wenn dein Editor wie in create-concept.js läuft (z. B. /pdf-editor),
   // öffnen wir ihn in einem neuen Tab mit dem pCloud-Pfad.
   const pdfPath = encodeURIComponent(contract.pdf_url)
+  const pdfFileName = contract.pdf_url.split('/').pop();
+
   const customerId = contract.customer_id
   const contractId = contract.id
 
   //const editorUrl = `/pdf-editor?path=${pdfPath}&customerId=${customerId}&contractId=${contractId}&mode=edit`
   //const editorUrl = `/pdf-editor?documentName=${pdfPath}&customerId=${customerId}&contractId=${contractId}&mode=edit`
-  const editorUrl = `/pdf-editor?documentName=${pdfPath}&customerId=${customerId}&customerName=${encodeURIComponent(contract.customer?.name || '')}&contractId=${contractId}&mode=edit`;
+  //const editorUrl = `/pdf-editor?documentName=${pdfPath}&customerId=${customerId}&customerName=${encodeURIComponent(contract.customer?.name || '')}&contractId=${contractId}&mode=edit`;
+  const editorUrl = `/pdf-editor?documentName=${encodeURIComponent(pdfFileName)}&customerId=${customerId}&customerName=${encodeURIComponent(contract.customer?.name || '')}&contractId=${contractId}&mode=edit`;
 
 
   window.open(editorUrl, '_blank')
