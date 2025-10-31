@@ -132,7 +132,8 @@ const handleCreate = async () => {
           customer_id: customer.id,
           user_id: customer.user_id,
           state: 'Antrag',
-          pdf_url: fileUrlFinal,
+          //pdf_url: fileUrlFinal,
+          pdf_url: `/customers/${customer.name}/${fullDocumentName}`,
           document_name: fullDocumentName,
         },
       ])
