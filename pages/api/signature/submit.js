@@ -71,6 +71,26 @@ export default async function handler(req, res) {
     
     let fileUrl = contractData.pdf_url; 
     console.log('🔗 Datenbank-Link verwendet für Download:', fileUrl);
+
+    // Wenn nur ein Pfad (z. B. /customers/...) vorhanden ist → baue den vollständigen Download-Link
+if (fileUrl.startsWith('/customers/')) {
+  const token = accessToken; // aus deiner Funktion getAccessToken()
+  const getFileUrl = `${PCLOUD_API_URL}/getfilelink?path=${encodeURIComponent(fileUrl)}&access_token=${token}`;
+  console.log('📡 Hole echten Download-Link von pCloud:', getFileUrl);
+
+  const metaResp = await fetch(getFileUrl);
+  const metaData = await metaResp.json();
+
+  if (metaData.result !== 0) {
+    console.error('❌ pCloud getfilelink fehlgeschlagen:', metaData);
+    return res.status(500).json({ error: 'Failed to resolve PDF download link', debug: metaData });
+  }
+
+  const host = metaData.hosts?.[0];
+  fileUrl = `https://${host}${metaData.path}`;
+  console.log('✅ Vollständiger Download-Link:', fileUrl);
+}
+
     
     // 🚀 FIX: Erzwinge die Nutzung des stabilen API-Hosts und bereinige '&amp;'
     // Dies behebt den ENOTFOUND-Fehler und funktioniert nun, da der Link linkid, code & token enthält.
@@ -82,7 +102,7 @@ export default async function handler(req, res) {
     
     // Versuch, die Datei herunterzuladen
     const fileResp = await fetch(finalDownloadUrl);
-    
+
     if (!fileResp.ok) {
         console.error(`❌ Download failed, Link abgelaufen/ungültig: ${fileResp.status} ${fileResp.statusText}`);
         return res.status(500).json({ error: `Failed to download PDF template (Status: ${fileResp.status}).` });
