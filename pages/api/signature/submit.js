@@ -199,12 +199,44 @@ if (fileUrl.startsWith('/customers/')) {
 
 
     // 6) Neue Datei hochladen (KORRIGIERT MIT FORM-DATA)
-    const folderIdForPcloud = folder_id ? Number(folder_id) : null; 
+    /*const folderIdForPcloud = folder_id ? Number(folder_id) : null; 
 
     if (!folderIdForPcloud || isNaN(folderIdForPcloud)) {
         console.error("Missing or invalid folderId for pCloud upload:", folder_id);
         return res.status(400).json({ error: 'Missing or invalid pCloud folder ID for upload.' });
+    }*/
+
+
+    // 6) Neue Datei hochladen (KORRIGIERT MIT FORM-DATA)
+
+// 🧩 Falls folder_id fehlt: automatisch aus pCloud ermitteln
+let folderIdForPcloud = folder_id ? Number(folder_id) : null;
+
+if (!folderIdForPcloud || isNaN(folderIdForPcloud)) {
+  console.log("📭 folder_id fehlt – versuche, sie über pCloud zu ermitteln...");
+
+  try {
+    // Hole Dateimetadaten aus pCloud anhand des Dateipfads
+    const statUrl = `${PCLOUD_API_URL}/stat?path=${encodeURIComponent(fileUrl)}&access_token=${accessToken}`;
+    console.log("🔗 Stat-Abfrage an pCloud:", statUrl);
+
+    const statResp = await fetch(statUrl);
+    const statData = await statResp.json();
+
+    if (statData.result === 0 && statData.metadata?.parentfolderid) {
+      folderIdForPcloud = statData.metadata.parentfolderid;
+      console.log("✅ folder_id automatisch bestimmt:", folderIdForPcloud);
+    } else {
+      console.error("❌ Konnte folder_id nicht bestimmen:", statData);
+      return res.status(400).json({ error: 'Missing or invalid pCloud folder ID for upload.' });
     }
+  } catch (err) {
+    console.error("❌ Fehler beim Abrufen der folder_id:", err);
+    return res.status(400).json({ error: 'Could not resolve folder_id automatically.' });
+  }
+}
+
+
     
     const form = new FormData();
     form.append("file", Buffer.from(finalBytes), signedName); 
