@@ -178,12 +178,22 @@ if (fileUrl.startsWith('/customers/')) {
     const finalBytes = await pdfDoc.save();
     const finalHash = await sha256(finalBytes);
 
+
+
+    /*
     // 4) finalen Namen bestimmen
     const signedSuffix = role === 'customer' ? '_signed_customer' : '_signed_executive';
     const signedName =
       document_name.toLowerCase().endsWith('.pdf')
         ? document_name.replace(/\.pdf$/i, `${signedSuffix}.pdf`)
         : `${document_name}${signedSuffix}.pdf`;
+    */
+
+    // 4) Dateiname beibehalten (ersetzt Originaldatei)
+    const signedName = document_name.endsWith('.pdf') ? document_name : `${document_name}.pdf`;
+    console.log('📄 Überschreibe Originaldatei:', signedName);
+
+
 
     // 6) Neue Datei hochladen (KORRIGIERT MIT FORM-DATA)
     const folderIdForPcloud = folder_id ? Number(folder_id) : null; 
@@ -196,7 +206,14 @@ if (fileUrl.startsWith('/customers/')) {
     const form = new FormData();
     form.append("file", Buffer.from(finalBytes), signedName); 
 
-    const uploadUrl = `${PCLOUD_API_URL}/uploadfile?folderid=${folderIdForPcloud}&access_token=${accessToken}`;
+
+
+    //const uploadUrl = `${PCLOUD_API_URL}/uploadfile?folderid=${folderIdForPcloud}&access_token=${accessToken}`;
+    
+    // Überschreiben aktivieren: renameifexists=0
+    const uploadUrl = `${PCLOUD_API_URL}/uploadfile?folderid=${folderIdForPcloud}&access_token=${accessToken}&renameifexists=0`;
+
+
     
     const uploadResp = await fetch(uploadUrl, {
       method: "POST",
