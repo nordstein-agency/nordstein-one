@@ -51,6 +51,13 @@ export default async function handler(req, res) {
     console.log('DocumentName (Session):', document_name); 
     console.log('Signature Position (Session):', signature_position); 
 
+    console.log("🧾 --- SESSION DATEN ---");
+    console.log("Customer:", customer_name);
+    console.log("Document:", document_name);
+    console.log("Folder ID (Session):", folder_id);
+    console.log("-----------------------");
+
+
     const cleanDocName = document_name.replace(/^\/customers\/[^/]+\//, '').replace(/^\//, '');
 
     // 2) PDF-Template aus der Contracts-Tabelle holen
