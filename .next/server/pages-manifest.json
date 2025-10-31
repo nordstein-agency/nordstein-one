@@ -2,7 +2,10 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/contracts": "pages/contracts.js",
   "/pdf-editor": "pages/pdf-editor.js",
   "/projects": "pages/projects.js",
-  "/contracts": "pages/contracts.js"
+  "/api/get-pcloud-file": "pages/api/get-pcloud-file.js",
+  "/api/signature/create": "pages/api/signature/create.js",
+  "/api/proxy-pdf": "pages/api/proxy-pdf.js"
 }

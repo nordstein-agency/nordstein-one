@@ -7,12 +7,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const cleanDocName = documentName.replace(/\.pdf$/i, "");
+
+    /*const cleanDocName = documentName.replace(/\.pdf$/i, "");
     const apiUrl = `${process.env.PCLOUD_API_URL}/getfilelink?path=/customers/${encodeURIComponent(
       customerName
     )}/${encodeURIComponent(cleanDocName)}.pdf&access_token=${
       process.env.PCLOUD_ACCESS_TOKEN
-    }`;
+    }`;*/
+
+  // Prüfe, ob documentName bereits einen vollen Pfad enthält
+  let cleanPath = documentName.trim();
+  if (!cleanPath.startsWith("/customers/")) {
+    cleanPath = `/customers/${customerName}/${cleanPath}`;
+  }
+
+  // Doppelte Slashes vermeiden
+  cleanPath = cleanPath.replace(/\/{2,}/g, "/");
+
+  // Vollständige API-URL bauen
+  const apiUrl = `${process.env.PCLOUD_API_URL}/getfilelink?path=${encodeURIComponent(
+    cleanPath
+  )}&access_token=${process.env.PCLOUD_ACCESS_TOKEN}`;
+
+  console.log("🔗 pCloud-API-URL:", apiUrl);
+
+
 
     console.log("🔗 pCloud-API-URL:", apiUrl);
 

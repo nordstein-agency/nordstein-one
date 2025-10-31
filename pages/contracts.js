@@ -465,7 +465,11 @@ const handleEditPdf = async (contract) => {
   const customerId = contract.customer_id
   const contractId = contract.id
 
-  const editorUrl = `/pdf-editor?path=${pdfPath}&customerId=${customerId}&contractId=${contractId}&mode=edit`
+  //const editorUrl = `/pdf-editor?path=${pdfPath}&customerId=${customerId}&contractId=${contractId}&mode=edit`
+  //const editorUrl = `/pdf-editor?documentName=${pdfPath}&customerId=${customerId}&contractId=${contractId}&mode=edit`
+  const editorUrl = `/pdf-editor?documentName=${pdfPath}&customerId=${customerId}&customerName=${encodeURIComponent(contract.customer?.name || '')}&contractId=${contractId}&mode=edit`;
+
+
   window.open(editorUrl, '_blank')
 }
 
