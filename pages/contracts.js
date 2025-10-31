@@ -129,6 +129,8 @@ export default function Contracts() {
   const [customUser, setCustomUser] = useState(null)
   const [team, setTeam] = useState([])
   const [selectedContract, setSelectedContract] = useState(null)
+  const [selectedUserId, setSelectedUserId] = useState('')
+
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
   const [totalPages, setTotalPages] = useState(1)
@@ -383,6 +385,8 @@ export default function Contracts() {
 
 const handleSendEmail = async () => {
   
+
+
   
   if (!selectedContract) return alert('Kein Vertrag ausgewählt!')
 
@@ -393,15 +397,77 @@ const handleSendEmail = async () => {
       body: JSON.stringify({ contractId: selectedContract.id })
     })
     const data = await res.json()
-    if (res.ok) alert(data.message)
-    else alert('Fehler: ' + data.error)
+    if (res.ok) {
+      alert(data.message)
+      
+      // 2️⃣ Status des Vertrags auf "Gesendet" setzen
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({ state: 'Gesendet' })
+        .eq('id', selectedContract.id)
+
+      if (updateError) throw updateError
+
+      // Lokales Update
+      setContracts(prev =>
+        prev.map(c =>
+          c.id === selectedContract.id ? { ...c, state: 'Gesendet' } : c
+        )
+      )
+
+      console.log('✅ Vertragsstatus auf "Gesendet" gesetzt.')
+
+    } else alert('Fehler: ' + data.error)
+
+
+
   } catch (err) {
     console.error(err)
     alert('Fehler beim Versenden der E-Mail')
   }
+
+
+console.log('📦 create-projects request:', {
+  contractId: selectedContract?.id,
+  userId: selectedUser?.id,
+})
+
+  // 🆕 Projekte automatisch erstellen
+  const createProjectsRes = await fetch('/api/create-projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contractId: selectedContract.id, // ID des verschickten Vertrags
+      userId: selectedUser?.id,   // aus deinem Modal ausgewählter Betreuer
+    }),
+  })
+
+  const createProjectsData = await createProjectsRes.json()
+  if (!createProjectsRes.ok) {
+    console.error('❌ Fehler beim Erstellen der Projekte:', createProjectsData)
+  } else {
+    console.log('✅ Projekte erstellt:', createProjectsData.count)
+  }
+
 }
 
 
+const handleEditPdf = async (contract) => {
+
+  if (!contract?.pdf_url) {
+    alert('Keine PDF zum Bearbeiten vorhanden.')
+    return
+  }
+
+  // Wenn dein Editor wie in create-concept.js läuft (z. B. /pdf-editor),
+  // öffnen wir ihn in einem neuen Tab mit dem pCloud-Pfad.
+  const pdfPath = encodeURIComponent(contract.pdf_url)
+  const customerId = contract.customer_id
+  const contractId = contract.id
+
+  const editorUrl = `/pdf-editor?path=${pdfPath}&customerId=${customerId}&contractId=${contractId}&mode=edit`
+  window.open(editorUrl, '_blank')
+}
 
 
 
@@ -482,16 +548,71 @@ const handleSendEmail = async () => {
         <div className="bg-white rounded shadow mt-8 p-6 relative">
           <h1 className="text-xl font-bold mb-4 text-[#451a3d]">VERTRAG</h1>
 
-          <div className="absolute top-4 right-4 flex gap-2">
-            <button onClick={() => setSelectedContract(null)} className="border px-3 py-1 rounded">Schließen</button>
-            <button onClick={openSubmitModal} className="border px-3 py-1 rounded">Einreichen</button>
-            <button
-              onClick={() => handleDownload(selectedContract.pdf_url, selectedContract.customer?.name || 'vertrag')}
-              className="border px-3 py-1 rounded"
-            >
-              Download
-            </button>
-          </div>
+
+
+
+          <div className="absolute top-4 right-4 flex gap-3">
+  <button
+    onClick={() => setSelectedContract(null)}
+    className="bg-[#6b3c67] text-white px-5 py-2 font-medium border-none outline-none"
+    style={{
+      boxShadow: 'none',
+      border: 'none',
+      transition: 'background-color 0.2s ease',
+    }}
+    onMouseEnter={(e) => (e.target.style.backgroundColor = '#7e4a76')}
+    onMouseLeave={(e) => (e.target.style.backgroundColor = '#6b3c67')}
+  >
+    Schließen
+  </button>
+
+  <button
+    onClick={openSubmitModal}
+    className="bg-[#451a3d] text-white px-5 py-2 font-medium border-none outline-none"
+    style={{
+      boxShadow: 'none',
+      border: 'none',
+      transition: 'background-color 0.2s ease',
+    }}
+    onMouseEnter={(e) => (e.target.style.backgroundColor = '#5e2a56')}
+    onMouseLeave={(e) => (e.target.style.backgroundColor = '#451a3d')}
+  >
+    Einreichen
+  </button>
+
+  {/* NEU: BEARBEITEN */}
+  <button
+    onClick={() => handleEditPdf(selectedContract)}
+    disabled={selectedContract.state !== 'Antrag'}
+    className={`px-5 py-2 font-medium border-none outline-none ${
+      selectedContract.state === 'Antrag'
+        ? 'bg-[#7b4c75] text-white hover:bg-[#905b8a]'
+        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+    }`}
+  >
+    Bearbeiten
+  </button>
+
+  <button
+    onClick={() => handleDownload(selectedContract.pdf_url, selectedContract.customer?.name || 'vertrag')}
+    className="bg-[#8b5c87] text-white px-5 py-2 font-medium border-none outline-none"
+    style={{
+      boxShadow: 'none',
+      border: 'none',
+      transition: 'background-color 0.2s ease',
+    }}
+    onMouseEnter={(e) => (e.target.style.backgroundColor = '#9d6a99')}
+    onMouseLeave={(e) => (e.target.style.backgroundColor = '#8b5c87')}
+  >
+    Download
+  </button>
+</div>
+
+
+
+
+
+
 
           <div className="grid grid-cols-3 gap-8 mb-6">
             <div>

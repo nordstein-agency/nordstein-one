@@ -16,8 +16,11 @@ export const dynamic = 'force-dynamic';
 
 export default function PdfEditor() {
   const router = useRouter();
-  const { customerId, customerName, documentName, folderId } = router.query;
+  const { customerId, customerName, documentName, folderId, path, mode, contractId } = router.query;
   const [fileUrl, setFileUrl] = useState(null);
+  // Falls documentName leer ist, aber ein path mitgegeben wurde (aus contracts.js)
+  const effectiveDocumentName = documentName || path?.split('/').pop();
+
   const [error, setError] = useState(null);
   
   // ✅ NEU: Schlüssel zur erzwingenden Neuladung des useEffects
@@ -25,17 +28,27 @@ export default function PdfEditor() {
   
   // Funktion zum Laden der PDF
   const fetchPdf = useCallback(async (docName) => {
-      if (!customerName || !docName) return false;
-      
+      //if (!customerName || !docName) return false;
+      if ((!customerName && !customerId) || !docName) return false;
+
+
       console.log(`🔍 Lade Datei: ${docName} von pCloud über Server-Route...`);
 
       try {
         // 1️⃣ Anfrage an eigene API (holt pCloud-Link)
-        const resp = await fetch(
+        /*const resp = await fetch(
           `/api/get-pcloud-file?customerName=${encodeURIComponent(
             customerName
           )}&documentName=${encodeURIComponent(docName)}`
+        );*/
+
+        const resp = await fetch(
+          `/api/get-pcloud-file?${customerName
+            ? `customerName=${encodeURIComponent(customerName)}`
+            : `customerId=${encodeURIComponent(customerId)}`
+          }&documentName=${encodeURIComponent(docName)}`
         );
+
 
         const data = await resp.json();
         console.log('📡 API Antwort:', data);
@@ -66,7 +79,9 @@ export default function PdfEditor() {
 
 
   useEffect(() => {
-    if (!customerName || !documentName) return;
+    //if (!customerName || !documentName) return;
+    if ((!customerName && !customerId) || (!documentName && !path)) return;
+
 
     // 💡 Lade-Logik: Versuche zuerst die unterschriebene Version zu laden
     const tryLoadPdf = async () => {

@@ -591,7 +591,7 @@ export default function Projects() {
               <th className="px-6 py-3 text-left text-sm font-semibold text-[#451a3d] uppercase tracking-wider">Kunde</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-[#451a3d] uppercase tracking-wider">Tarif</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-[#451a3d] uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-[#451a3d] uppercase tracking-wider">Preis</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-[#451a3d] uppercase tracking-wider">Deadline</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -605,7 +605,7 @@ export default function Projects() {
                   <td className="px-6 py-4 text-sm text-gray-700">{project.customer_name}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{project.tarif}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{project.status}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{project.price ? `${project.price} €` : '-'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{project.price ? `${project.price} ` : '-'}</td>
                 </tr>
               ))
             ) : (
@@ -631,7 +631,7 @@ export default function Projects() {
               <p><strong>Betreuer:</strong> {selectedProject.user_name}</p>
               <p><strong>Tarif:</strong> {selectedProject.tarif}</p>
               <p><strong>Status:</strong> {selectedProject.status}</p>
-              <p><strong>Preis:</strong> {selectedProject.price ? `${selectedProject.price} €` : '-'}</p>
+              <p><strong>Deadline:</strong> {selectedProject.deadline ? `${selectedProject.deadline} ` : '-'}</p>
             </div>
 
             {/* Rechte Spalte: Benötigte Leistungen */}
