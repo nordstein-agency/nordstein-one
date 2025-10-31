@@ -461,7 +461,7 @@ const handleEditPdf = async (contract) => {
 
   // Wenn dein Editor wie in create-concept.js läuft (z. B. /pdf-editor),
   // öffnen wir ihn in einem neuen Tab mit dem pCloud-Pfad.
-  const pdfPath = encodeURIComponent(contract.pdf_url)
+  //const pdfPath = encodeURIComponent(contract.pdf_url)
   const pdfFileName = contract.pdf_url.split('/').pop();
 
   const customerId = contract.customer_id

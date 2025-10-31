@@ -4,7 +4,5 @@
   "/_document": "pages/_document.js",
   "/contracts": "pages/contracts.js",
   "/projects": "pages/projects.js",
-  "/pdf-editor": "pages/pdf-editor.js",
-  "/api/get-pcloud-file": "pages/api/get-pcloud-file.js",
-  "/api/proxy-pdf": "pages/api/proxy-pdf.js"
+  "/pdf-editor": "pages/pdf-editor.js"
 }
