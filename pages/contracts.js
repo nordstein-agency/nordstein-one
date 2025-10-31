@@ -89,14 +89,15 @@ const handleDownload = (fileUrl) => {
 
 
 
-const handleDownload = (url, name = 'vertrag.pdf') => {
-  const proxied = `/api/proxy-pdf?url=${encodeURIComponent(url)}`;
+const handleDownload = (path, name = 'vertrag.pdf') => {
+  const url = `/api/download-pcloud-file?path=${encodeURIComponent(path)}`;
   const link = document.createElement('a');
-  link.href = proxied;
+  link.href = url;
   link.download = name;
   link.target = '_blank';
   link.click();
 };
+
 
 
 
