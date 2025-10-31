@@ -90,13 +90,31 @@ const handleDownload = (fileUrl) => {
 
 
 const handleDownload = (path, name = 'vertrag.pdf') => {
-  const url = `/api/download-pcloud-file?path=${encodeURIComponent(path)}`;
+  if (!path) {
+    alert('❌ Kein gültiger Pfad übergeben!');
+    return;
+  }
+
+  // Pfad anpassen:
+  let cleanPath = path.trim();
+
+  // Wenn kein "/" am Anfang ist → hinzufügen
+  if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+
+  // Wenn kein ".pdf" am Ende ist → hinzufügen
+  if (!cleanPath.toLowerCase().endsWith('.pdf')) cleanPath += '.pdf';
+
+  console.log('📂 Verwende bereinigten Pfad:', cleanPath);
+
+  // Jetzt kann der Server mit dem korrekten Pfad die Datei holen
+  const url = `/api/download-pcloud-file?path=${encodeURIComponent(cleanPath)}`;
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
   link.target = '_blank';
   link.click();
 };
+
 
 
 
