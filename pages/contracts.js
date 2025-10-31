@@ -66,43 +66,37 @@ const handleDownload = (pdfUrl, title = 'vertrag') => {
 
 
 
-// 💡 Stabile handleDownload-Funktion für PCloud & Supabase
-const handleDownload = (pdfUrl, title = 'vertrag') => {
-  if (!pdfUrl) {
-    alert('Kein PDF für diesen Vertrag hinterlegt.')
-    return
-  }
-
-  // 🔹 Wenn es ein direkter pCloud-Link (http...) ist → einfach öffnen
-  if (pdfUrl.startsWith('http')) {
-    console.log('🔗 Öffne pCloud-Link:', pdfUrl)
-    window.open(pdfUrl, '_blank')
-    return
-  }
-
-  // 🔹 Wenn es ein Supabase-Speicherpfad ist → originaler Download
-  const downloadSupabase = async () => {
-    try {
-      const { data, error } = await supabase.storage.from('contracts').download(pdfUrl)
-      if (error) throw error
-
-      const url = window.URL.createObjectURL(data)
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `${title}.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('Fehler beim Herunterladen der PDF:', err)
-      alert('Fehler beim Herunterladen der PDF.')
+/*
+const handleDownload = (fileUrl) => {
+    // 1. Token entfernen (für Public Link Host)
+    let downloadUrl = fileUrl.replace(/&access_token=[^&]+/, '');
+    
+    // 2. Host umstellen (nutze den Public Link Host, da Browser ihn auflösen kann)
+    downloadUrl = downloadUrl.replace('eapi.pcloud.com', 'publnk.pcloud.com');
+    
+    // 3. Methode auf 'getpublink' umstellen (für Public Link Host)
+    downloadUrl = downloadUrl.replace('/getpublinkdownload', '/getpublink');
+    
+    // 4. Download erzwingen
+    if (!downloadUrl.includes('forcedownload=1')) {
+        downloadUrl += '&forcedownload=1';
     }
-  }
 
-  downloadSupabase()
+    console.log('🔗 Frontend Download URL:', downloadUrl);
+    window.open(downloadUrl, '_blank');
 }
+*/
 
+
+
+const handleDownload = (url, name = 'vertrag.pdf') => {
+  const proxied = `/api/proxy-pdf?url=${encodeURIComponent(url)}`;
+  const link = document.createElement('a');
+  link.href = proxied;
+  link.download = name;
+  link.target = '_blank';
+  link.click();
+};
 
 
 
