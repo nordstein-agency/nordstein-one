@@ -509,13 +509,118 @@ const items = selectedServices.map((s) => {
     window.URL.revokeObjectURL(url)
   }
 
-  const handleAddToCustomer = () => {
+
+
+
+  const handleAddToCustomer = async () => {
+  try {
     if (!selectedCustomer) {
-      alert("Bitte zuerst einen Kunden auswählen.")
+      alert('Bitte zuerst einen Kunden auswählen.')
       return
     }
-    alert(`✅ Angebot für Kunde "${customers.find(c => c.id === selectedCustomer)?.name}" gespeichert!`)
+
+    const customer = customers.find((c) => c.id === selectedCustomer)
+    const customerName = customer?.name || "Unbekannt"
+    const customerAddress = customer?.adress || ""
+    const customerCountry = customer?.country || ""
+
+    if (!customerName) {
+      alert("Kundendaten nicht gefunden.")
+      return
+    }
+
+    // 🔹 Übersetzungen für englische PDFs
+    const serviceTranslations = {
+      web_small: "Basic website (1–3 pages)",
+      web_medium: "Standard website (up to 6 pages)",
+      web_big: "Large website (custom design)",
+      wordpress: "WordPress website setup",
+      booking_tool: "Online booking tool",
+      videoshoot_full: "Full video shoot (1 day)",
+      videoshoot_half: "Half-day video shoot",
+      fotoshoot_full: "Full photo shoot (1 day)",
+      fotoshoot_half: "Half-day photo shoot",
+      production_full: "Full content production",
+      production_half: "Half content production",
+      social_small: "Social media package (small)",
+      social_big: "Social media package (large)",
+      graphic_ad: "Graphic ad creation",
+      logo: "Logo design",
+      setup_small: "Basic marketing setup",
+      setup_big: "Comprehensive marketing setup",
+      campaign_small: "Small advertising campaign",
+      campaign_medium: "Medium advertising campaign",
+      campaign_big: "Large advertising campaign",
+      seo_small: "Basic SEO optimization",
+      seo_medium: "Advanced SEO optimization",
+      seo_big: "Professional SEO package",
+      email_small: "Basic email marketing",
+      email_big: "Advanced email marketing",
+      wa_small: "WhatsApp marketing (small)",
+      wa_big: "WhatsApp marketing (large)",
+    }
+
+    const items = selectedServices.map((s) => {
+      const germanDescription = services.find((x) => x.title === s)?.description || s
+      const englishDescription = serviceTranslations[s] || germanDescription
+      return {
+        description: language === "en" ? englishDescription : germanDescription,
+        price: getHighestPrice(s),
+      }
+    })
+
+    if (items.length === 0) {
+      alert("Bitte mindestens eine Leistung auswählen.")
+      return
+    }
+
+    // 1️⃣ PDF generieren
+    const res = await fetch("/api/generate-offer-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerName,
+        customerAddress,
+        customerCountry,
+        items,
+        language,
+      }),
+    })
+
+    if (!res.ok) throw new Error("Fehler beim Erstellen der PDF")
+    const blob = await res.blob()
+
+    // 2️⃣ In FormData für Upload umwandeln
+    const formData = new FormData()
+    formData.append("customerName", customerName)
+
+    const fileName = `Angebot_${new Date().toISOString().split("T")[0]}.pdf`
+    formData.append("newFileName", fileName)
+    formData.append("file", blob, fileName)
+
+    // 3️⃣ PDF in pCloud hochladen
+    const uploadRes = await fetch("/api/upload-contract-pdf", {
+      method: "POST",
+      body: formData,
+    })
+
+    const uploadJson = await uploadRes.json()
+    if (!uploadRes.ok || !uploadJson.ok) {
+      console.error("❌ Upload fehlgeschlagen:", uploadJson)
+      throw new Error(uploadJson.message || "Upload fehlgeschlagen")
+    }
+
+    console.log("✅ Angebot erfolgreich im Kundenordner gespeichert:", uploadJson.relativePath)
+    alert(`✅ Angebot wurde erfolgreich im Kundenordner von "${customerName}" gespeichert!`)
+  } catch (err) {
+    console.error("❌ Fehler beim Hochladen ins Kundenprofil:", err)
+    alert("Fehler beim Hinzufügen zum Kundenprofil: " + err.message)
   }
+}
+
+
+
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">
