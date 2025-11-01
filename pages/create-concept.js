@@ -1,7 +1,7 @@
 // pages/create-concept.js
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
-import { useRouter } from 'next/router'
+import { useEffect, useState } from "react"
+import { supabase } from "../lib/supabaseClient"
+import { useRouter } from "next/router"
 
 export default function CreateConcept() {
   const router = useRouter()
@@ -9,7 +9,7 @@ export default function CreateConcept() {
   const [customer, setCustomer] = useState(null)
   const [templates, setTemplates] = useState([])
   const [selectedDocs, setSelectedDocs] = useState([])
-  const [selectedConcept, setSelectedConcept] = useState('Starter')
+  const [selectedConcept, setSelectedConcept] = useState("Starter")
   const [loading, setLoading] = useState(true)
   const [services, setServices] = useState([])
   const [selectedServices, setSelectedServices] = useState([])
@@ -19,11 +19,11 @@ export default function CreateConcept() {
     if (!customerId) return
     const fetchCustomer = async () => {
       const { data, error } = await supabase
-        .from('customers')
-        .select('id, name, user_id')
-        .eq('id', customerId)
+        .from("customers")
+        .select("id, name, user_id")
+        .eq("id", customerId)
         .single()
-      if (error) console.error('Fehler beim Laden des Kunden:', error)
+      if (error) console.error("Fehler beim Laden des Kunden:", error)
       else setCustomer(data)
     }
     fetchCustomer()
@@ -33,10 +33,10 @@ export default function CreateConcept() {
   useEffect(() => {
     const fetchTemplates = async () => {
       const { data, error } = await supabase.storage
-        .from('concept_templates')
-        .list('contract_templates', {
+        .from("concept_templates")
+        .list("contract_templates", {
           limit: 100,
-          sortBy: { column: 'name', order: 'asc' },
+          sortBy: { column: "name", order: "asc" },
         })
 
       if (error) {
@@ -47,7 +47,7 @@ export default function CreateConcept() {
       }
 
       const cleaned =
-        data?.filter((f) => f.name?.endsWith('.pdf')).map((f) => f.name.replace('.pdf', '')) || []
+        data?.filter((f) => f.name?.endsWith(".pdf")).map((f) => f.name.replace(".pdf", "")) || []
 
       setTemplates(cleaned)
       setLoading(false)
@@ -58,9 +58,9 @@ export default function CreateConcept() {
   // 🔹 Services laden
   useEffect(() => {
     const fetchServices = async () => {
-      const { data, error } = await supabase.from('services').select('title, description')
+      const { data, error } = await supabase.from("services").select("title, description")
       if (error) {
-        console.error('Fehler beim Laden der Services:', error)
+        console.error("Fehler beim Laden der Services:", error)
         return
       }
       setServices(data || [])
@@ -80,25 +80,62 @@ export default function CreateConcept() {
     )
   }
 
+  // 🔹 Kategorisierung fix nach deinen Vorgaben
+  const groupedServices = {
+    Webdesign: services.filter((s) =>
+      ["web_small", "web_medium", "web_big", "wordpress", "booking_tool"].includes(s.title)
+    ),
+    "Content Creation": services.filter((s) =>
+      [
+        "videoshoot_full",
+        "videoshoot_half",
+        "fotoshoot_full",
+        "fotoshoot_half",
+        "production_full",
+        "production_half",
+        "social_small",
+        "social_big",
+        "graphic_ad",
+        "logo",
+      ].includes(s.title)
+    ),
+    "Online Marketing": services.filter((s) =>
+      [
+        "setup_small",
+        "setup_big",
+        "campaign_small",
+        "campaign_medium",
+        "campaign_big",
+        "seo_small",
+        "seo_medium",
+        "seo_big",
+        "email_small",
+        "email_big",
+        "wa_small",
+        "wa_big",
+      ].includes(s.title)
+    ),
+  }
+
   // 🔹 Hauptfunktion
   const handleCreate = async () => {
     try {
       if (!customer) {
-        alert('Kunde nicht gefunden.')
+        alert("Kunde nicht gefunden.")
         return
       }
       if (selectedDocs.length === 0) {
-        alert('Bitte mindestens ein Dokument auswählen!')
+        alert("Bitte mindestens ein Dokument auswählen!")
         return
       }
 
       // 🧮 Vertragsnummer berechnen
       const yearShort = new Date().getFullYear().toString().slice(-2)
       const { data: existingContracts } = await supabase
-        .from('contracts')
-        .select('contract_nr')
-        .like('contract_nr', `C${yearShort}%`)
-        .order('contract_nr', { ascending: false })
+        .from("contracts")
+        .select("contract_nr")
+        .like("contract_nr", `C${yearShort}%`)
+        .order("contract_nr", { ascending: false })
         .limit(1)
 
       let nextNumber = 1
@@ -108,79 +145,72 @@ export default function CreateConcept() {
         nextNumber = lastNumeric + 1
       }
 
-      const newContractNr = `C${yearShort}${String(nextNumber).padStart(6, '0')}`
-      console.log('🆕 Neue Vertragsnummer:', newContractNr)
+      const newContractNr = `C${yearShort}${String(nextNumber).padStart(6, "0")}`
+      console.log("🆕 Neue Vertragsnummer:", newContractNr)
 
       // 🆕 Neuer Dateiname für Upload
       const newFileName = `${newContractNr}_${selectedDocs[0]}.pdf`
 
       // 1️⃣ Datei in pCloud hochladen
-      const uploadRes = await fetch('/api/add-customer-docs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const uploadRes = await fetch("/api/add-customer-docs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: customer.name,
           files: selectedDocs,
-          newFileName, // 🆕 hier
+          newFileName,
         }),
       })
 
       const uploadResult = await uploadRes.json()
       if (!uploadRes.ok) throw new Error(uploadResult.message)
-      console.log('✅ Upload abgeschlossen:', uploadResult)
+      console.log("✅ Upload abgeschlossen:", uploadResult)
 
       const uploadedFile = uploadResult.uploadedFiles[0]
       const folderId = uploadResult.folderId
-      const fullDocumentName = `${uploadedFile}.pdf` // jetzt korrekt!
-
-
-
+      const fullDocumentName = `${uploadedFile}.pdf`
 
       // 2️⃣ Direktlink holen (mit Kundenname)
-const directRes = await fetch(
-  `/api/get-direct-link?customerName=${encodeURIComponent(
-    customer.name
-  )}&fileName=${encodeURIComponent(fullDocumentName)}`
-)
+      const directRes = await fetch(
+        `/api/get-direct-link?customerName=${encodeURIComponent(
+          customer.name
+        )}&fileName=${encodeURIComponent(fullDocumentName)}`
+      )
 
-const directData = await directRes.json()
-if (!directRes.ok || !directData.ok) throw new Error('Fehler beim Erzeugen des Links')
+      const directData = await directRes.json()
+      if (!directRes.ok || !directData.ok) throw new Error("Fehler beim Erzeugen des Links")
 
-const fileUrlFinal = directData.directUrl
-console.log('🔗 Stabiler Direktlink:', fileUrlFinal)
-
-
-
-
+      const fileUrlFinal = directData.directUrl
+      console.log("🔗 Stabiler Direktlink:", fileUrlFinal)
 
       // 3️⃣ Vertrag speichern
       const { data: contractData, error: insertError } = await supabase
-        .from('contracts')
+        .from("contracts")
         .insert([
           {
             tarif: selectedConcept,
             customer_id: customer.id,
             user_id: customer.user_id,
-            state: 'Antrag',
+            state: "Antrag",
             pdf_url: `/customers/${customer.name}/${fullDocumentName}`,
             document_name: fullDocumentName,
             contract_nr: newContractNr,
             services_selected: selectedServices,
           },
         ])
-        .select('id')
+        .select("id")
         .single()
 
       if (insertError) throw insertError
-      console.log('📦 Neuer Vertrag erstellt:', contractData)
+      console.log("📦 Neuer Vertrag erstellt:", contractData)
 
       // 4️⃣ PDF-Editor öffnen
       const editorUrl = `/pdf-editor?customerId=${customer.id}&customerName=${encodeURIComponent(
         customer.name
       )}&folderId=${folderId}&documentName=${encodeURIComponent(fullDocumentName)}`
-      window.open(editorUrl, '_blank')
+      window.open(editorUrl, "_blank")
     } catch (err) {
-      console.error('❌ Fehler in create-concept:', err)
+      console.error("❌ Fehler in create-concept:", err)
       alert(`Fehler beim Erstellen des Konzepts:\n${err?.message || err}`)
     }
   }
@@ -189,13 +219,13 @@ console.log('🔗 Stabiler Direktlink:', fileUrlFinal)
     return <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">Lädt...</div>
   }
 
-  // UI
+  // 🔹 UI
   return (
     <div className="max-w-6xl mx-auto p-6 text-[#451a3d]">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Konzepterstellung</h1>
         <button
-          onClick={() => router.push(`/customers?customerId=${customer?.id || ''}`)}
+          onClick={() => router.push(`/customers?customerId=${customer?.id || ""}`)}
           className="bg-[#451a3d] text-white px-6 py-2 hover:bg-[#6b3c67] transition-all border-none"
         >
           Zum Kundenprofil
@@ -222,6 +252,7 @@ console.log('🔗 Stabiler Direktlink:', fileUrlFinal)
         </select>
       </div>
 
+      {/* Dokumentenvorlagen */}
       <div className="mb-6">
         <label className="block mb-2 font-semibold">Dokumentenvorlagen</label>
         <div className="flex flex-col gap-2 border border-gray-200 rounded p-4 bg-white">
@@ -238,6 +269,36 @@ console.log('🔗 Stabiler Direktlink:', fileUrlFinal)
           ))}
         </div>
       </div>
+
+      {/* Leistungen nur bei Enterprise */}
+      {selectedConcept === "Enterprise" && (
+        <div className="mb-8">
+          <label className="block mb-4 font-semibold text-[#451a3d] text-lg">
+            Leistungen wählen
+          </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(groupedServices).map(([category, items]) => (
+              <div key={category}>
+                <h3 className="font-semibold mb-2">{category}</h3>
+                <div className="flex flex-col gap-2 border border-gray-200 rounded p-4 bg-white">
+                  {items.map((service) => (
+                    <label key={service.title} className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedServices.includes(service.title)}
+                        onChange={() => toggleService(service.title)}
+                        className="accent-[#451a3d] mt-1"
+                      />
+                      <span>{service.description}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <button
