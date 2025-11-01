@@ -2,7 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/contracts": "pages/contracts.js",
-  "/projects": "pages/projects.js",
-  "/pdf-editor": "pages/pdf-editor.js"
+  "/create-concept": "pages/create-concept.js",
+  "/dashboard": "pages/dashboard.js",
+  "/customers": "pages/customers.js",
+  "/api/add-customer-docs": "pages/api/add-customer-docs.js",
+  "/api/get-direct-link": "pages/api/get-direct-link.js",
+  "/pdf-editor": "pages/pdf-editor.js",
+  "/api/get-pcloud-file": "pages/api/get-pcloud-file.js",
+  "/api/proxy-pdf": "pages/api/proxy-pdf.js"
 }

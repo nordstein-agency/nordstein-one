@@ -3,63 +3,34 @@ import fetch from "node-fetch";
 
 export default async function handler(req, res) {
   try {
-    const { path } = req.query;
-    // path erwartet z.B. "/customers/EFS-AG/Dienstleistungsvertrag.pdf"
+    const { customerName, fileName } = req.query;
 
-    if (!path) {
-      return res.status(400).json({ error: "Missing 'path'" });
+    if (!customerName || !fileName) {
+      return res.status(400).json({ error: "Missing customerName or fileName." });
     }
 
-    const apiUrl = process.env.PCLOUD_API_URL || "https://api.pcloud.com";
-    const token =
-      process.env.PCLOUD_ACCESS_TOKEN ||
-      process.env.NEXT_PUBLIC_PCLOUD_ACCESS_TOKEN;
+    const apiUrl = process.env.PCLOUD_API_URL;
+    const token = process.env.PCLOUD_ACCESS_TOKEN;
 
-    if (!token) {
-      return res.status(500).json({ error: "Missing pCloud token" });
-    }
+    // 🧩 Pfad korrekt zusammensetzen
+    const fullPath = `/customers/${decodeURIComponent(customerName)}/${decodeURIComponent(fileName)}`;
+    console.log(`🔗 Suche Datei über Pfad: ${fullPath}`);
 
-    // 1) Frag pCloud nach direktem Download-Link für genau diese Datei
-    //    getfilelink gibt dir { hosts: [...], path: "/some/hash/filename.pdf", result: 0 }
-    const url = `${apiUrl}/getfilelink?path=${encodeURIComponent(
-      path
-    )}&access_token=${token}`;
-
-    const resp = await fetch(url, { method: "GET" });
+    const url = `${apiUrl}/getfilelink?path=${encodeURIComponent(fullPath)}&access_token=${token}`;
+    const resp = await fetch(url);
     const data = await resp.json();
 
     console.log("pCloud getfilelink response:", data);
 
-    if (!resp.ok || data.result !== 0) {
-      return res.status(500).json({
-        error: data.error || "pCloud getfilelink failed",
-        debug: data,
-      });
+    if (data.result !== 0 || !data?.hosts?.length) {
+      console.error("❌ Fehler beim Abrufen des Links:", data);
+      return res.status(404).json({ error: "File not found.", debug: data });
     }
 
-    // pCloud liefert so etwas:
-    // {
-    //   "hosts": ["u12345678.pcloud.com"],
-    //   "path": "/ZGxvbmdfd3V0X2VpbmUv.../Dienstleistungsvertrag.pdf",
-    //   "result": 0
-    // }
-    const host = data.hosts?.[0];
-    const filePath = data.path;
-
-    if (!host || !filePath) {
-      return res.status(500).json({ error: "Invalid getfilelink data" });
-    }
-
-    // Baue finalen Direktlink. Das ist ein ganz normaler HTTPS-Link zur Datei.
-    const directUrl = `https://${host}${filePath}`;
-
-    // diesen Link geben wir ans Frontend zurück und speichern ihn in Supabase
-    return res.status(200).json({
-      ok: true,
-      directUrl,
-    });
+    const directUrl = `https://${data.hosts[0]}${data.path}`;
+    return res.status(200).json({ ok: true, directUrl });
   } catch (err) {
-    console.error("get-direct-link error:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("❌ Fehler in get-direct-link:", err);
+    res.status(500).json({ error: err.message });
   }
 }
