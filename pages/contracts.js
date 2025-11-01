@@ -290,51 +290,114 @@ export default function Contracts() {
     setPdfFile(null)
   }
 
-  const handleSaveUpload = async () => {
-    if ((isNewCustomer && !customerName) || (!isNewCustomer && !existingCustomerId) || !tarif || !pdfFile) {
-      alert('Bitte alle Pflichtfelder ausfüllen.')
-      return
-    }
 
-    try {
-      let customerId = existingCustomerId
-      if (isNewCustomer) {
-        const { data: newCustomer, error: customerError } = await supabase
-          .from('customers')
-          .insert([{ name: customerName, user_id: customUser.id }])
-          .select()
-          .single()
-        if (customerError) throw customerError
-        customerId = newCustomer.id
+
+
+  const handleSaveUpload = async () => {
+  if ((isNewCustomer && !customerName) || (!isNewCustomer && !existingCustomerId) || !tarif || !pdfFile) {
+    alert('Bitte alle Pflichtfelder ausfüllen.')
+    return
+  }
+
+  try {
+    let finalCustomerId = existingCustomerId
+    let finalCustomerName = customerName
+
+    // 1️⃣ NEUEN KUNDEN ANLEGEN (falls nötig)
+    if (isNewCustomer) {
+      console.log('🆕 Neuer Kunde – wird in Supabase angelegt...')
+      const { data: newCustomer, error: customerError } = await supabase
+        .from('customers')
+        .insert([{ name: customerName, user_id: customUser.id }])
+        .select()
+        .single()
+
+      if (customerError) throw customerError
+      finalCustomerId = newCustomer.id
+      finalCustomerName = newCustomer.name
+
+      console.log('✅ Kunde in Supabase angelegt:', finalCustomerName)
+
+      // 2️⃣ P-CLOUD-ORDNER ANLEGEN
+      console.log('📁 Erstelle pCloud-Ordner für:', finalCustomerName)
+      const folderRes = await fetch('/api/create-customer-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: finalCustomerId }),
+      })
+
+      const folderData = await folderRes.json()
+      if (!folderRes.ok) {
+        console.error('❌ Fehler beim Erstellen des pCloud-Ordners:', folderData)
+        throw new Error(folderData.error || 'Fehler beim Erstellen des pCloud-Ordners')
       }
 
-      const fileName = `${Date.now()}_${pdfFile.name}`
-      const { error: uploadError } = await supabase
-        .storage
-        .from('contracts')
-        .upload(fileName, pdfFile, { upsert: true })
-      if (uploadError) throw uploadError
-
-      const { error: contractError } = await supabase
-        .from('contracts')
-        .insert([{
-          user_id: customUser.id,
-          customer_id: customerId,
-          tarif,
-          pdf_url: fileName,
-          state: 'antrag',
-          created_at: new Date().toISOString()
-        }])
-      if (contractError) throw contractError
-
-      fetchAllContracts(customUser.id)
-      setShowUploadModal(false)
-      alert('Antrag erfolgreich hochgeladen!')
-    } catch (err) {
-      console.error(err)
-      alert('Fehler beim Hochladen: ' + err.message)
+      console.log('✅ pCloud-Ordner erfolgreich erstellt:', folderData.folderId)
+    } else {
+      // Falls bestehender Kunde gewählt
+      const found = availableCustomers.find((c) => c.id === existingCustomerId)
+      finalCustomerName = found?.name || finalCustomerName
     }
+
+    // 3️⃣ PDF IN PCLOUD HOCHLADEN
+    console.log('⬆️ Lade PDF in pCloud hoch für:', finalCustomerName)
+    const formData = new FormData()
+    formData.append('customerName', finalCustomerName)
+
+    // schöner Dateiname: <timestamp>_<tarif>.pdf
+    const niceFileName = `${Date.now()}_${tarif}.pdf`
+    formData.append('newFileName', niceFileName)
+    formData.append('file', pdfFile)
+
+    const uploadRes = await fetch('/api/upload-contract-pdf', {
+      method: 'POST',
+      body: formData,
+    })
+
+    const uploadJson = await uploadRes.json()
+    if (!uploadRes.ok || !uploadJson.ok) {
+      console.error('❌ Upload fehlgeschlagen:', uploadJson)
+      throw new Error(uploadJson.message || 'Upload fehlgeschlagen')
+    }
+
+    const relativePath = uploadJson.relativePath
+    const storedFileName = uploadJson.fileName
+    console.log('✅ PDF erfolgreich hochgeladen:', relativePath)
+
+    // 4️⃣ VERTRAG IN SUPABASE SPEICHERN
+    console.log('📝 Speichere Vertrag in Supabase...')
+    const { data: insertedContract, error: insertError } = await supabase
+      .from('contracts')
+      .insert([
+        {
+          user_id: customUser.id,
+          customer_id: finalCustomerId,
+          tarif,
+          state: 'Antrag',
+          pdf_url: relativePath,
+          document_name: storedFileName,
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select('*')
+      .single()
+
+    if (insertError) throw insertError
+    console.log('✅ Vertrag angelegt:', insertedContract.id)
+
+    // 5️⃣ UI AKTUALISIEREN
+    await fetchAllContracts(customUser.id)
+    setShowUploadModal(false)
+    alert('✅ Antrag erfolgreich hochgeladen!')
+  } catch (err) {
+    console.error('❌ Fehler beim Hochladen:', err)
+    alert('Fehler beim Hochladen: ' + err.message)
   }
+}
+
+
+
+
 
   // ---------------------------
   // Submit Modal Logic

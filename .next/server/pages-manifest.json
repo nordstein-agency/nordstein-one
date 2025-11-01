@@ -2,7 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/offer-calculator": "pages/offer-calculator.js",
+  "/contracts": "pages/contracts.js",
   "/customers": "pages/customers.js",
-  "/api/generate-offer-pdf": "pages/api/generate-offer-pdf.js"
+  "/api/create-customer-folder": "pages/api/create-customer-folder.js",
+  "/api/proxy-pdf": "pages/api/proxy-pdf.js",
+  "/api/download-pcloud-file": "pages/api/download-pcloud-file.js",
+  "/pdf-editor": "pages/pdf-editor.js",
+  "/api/get-pcloud-file": "pages/api/get-pcloud-file.js",
+  "/api/upload-contract-pdf": "pages/api/upload-contract-pdf.js"
 }
