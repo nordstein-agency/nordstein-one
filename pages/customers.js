@@ -34,6 +34,7 @@ export default function Customers() {
     name: '',
     type: 'person',
     adress: '',
+    country: '',
     email: '',
     phone: '',
     ceo: '',
@@ -204,6 +205,7 @@ const saveCustomer = async () => {
           name: newCustomer.name,
           type: newCustomer.type,
           adress: newCustomer.adress,
+          country: newCustomer.country,
           email: newCustomer.email,
           phone: newCustomer.phone,
           ceo: newCustomer.ceo,
@@ -245,6 +247,7 @@ const saveCustomer = async () => {
           name: newCustomer.name,
           type: newCustomer.type,
           adress: newCustomer.adress,
+          country: newCustomer.country,
           email: newCustomer.email,
           phone: newCustomer.phone,
           ceo: newCustomer.ceo,
@@ -286,6 +289,7 @@ const saveCustomer = async () => {
       name: '',
       type: 'person',
       adress: '',
+      country: '',
       email: '',
       phone: '',
       ceo: '',
@@ -494,6 +498,24 @@ const saveCustomer = async () => {
                 className="border px-2 py-1"
               />
 
+
+                <label>Land</label>
+                  <select
+                    value={newCustomer.country}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, country: e.target.value })}
+                    className="border px-2 py-1"
+                  >
+                    <option value="">Bitte wählen</option>
+                    {[
+                      "Afghanistan","Ägypten","Albanien","Algerien","Andorra","Angola","Antigua und Barbuda","Argentinien","Armenien","Aserbaidschan","Äthiopien","Australien","Bahamas","Bahrain","Bangladesch","Barbados","Belgien","Belize","Benin","Bhutan","Bolivien","Bosnien und Herzegowina","Botswana","Brasilien","Brunei","Bulgarien","Burkina Faso","Burundi","Chile","China","Costa Rica","Dänemark","Deutschland","Dominica","Dominikanische Republik","Ecuador","El Salvador","Elfenbeinküste","England","Eritrea","Estland","Fidschi","Finnland","Frankreich","Gabun","Gambia","Georgien","Ghana","Griechenland","Grenada","Guatemala","Guinea","Guyana","Haiti","Honduras","Indien","Indonesien","Irak","Iran","Irland","Island","Israel","Italien","Jamaika","Japan","Jordanien","Kambodscha","Kamerun","Kanada","Kap Verde","Kasachstan","Katar","Kenia","Kirgisistan","Kiribati","Kolumbien","Komoren","Kongo","Kroatien","Kuba","Kuwait","Laos","Lettland","Libanon","Liberia","Libyen","Liechtenstein","Litauen","Luxemburg","Madagaskar","Malawi","Malaysia","Malediven","Mali","Malta","Marokko","Marshallinseln","Mauretanien","Mauritius","Mexiko","Mikronesien","Moldau","Monaco","Mongolei","Montenegro","Mosambik","Namibia","Nauru","Nepal","Neuseeland","Nicaragua","Niederlande","Niger","Nigeria","Nordmazedonien","Norwegen","Oman","Österreich","Pakistan","Palästina","Panama","Papua-Neuguinea","Paraguay","Peru","Philippinen","Polen","Portugal","Ruanda","Rumänien","Russland","Sambia","Samoa","San Marino","Saudi-Arabien","Schweden","Schweiz","Senegal","Serbien","Seychellen","Sierra Leone","Singapur","Slowakei","Slowenien","Somalia","Spanien","Sri Lanka","Südafrika","Sudan","Südkorea","Suriname","Syrien","Tadschikistan","Tansania","Thailand","Togo","Tonga","Trinidad und Tobago","Tschechien","Tunesien","Türkei","Turkmenistan","Tuvalu","Uganda","Ukraine","Ungarn","Uruguay","USA","Usbekistan","Vanuatu","Venezuela","Vereinigte Arabische Emirate","Vietnam","Weißrussland","Zentralafrikanische Republik","Zypern","Zimbabwe"
+                    ].map((land) => (
+                      <option key={land} value={land}>{land}</option>
+                    ))}
+                  </select>
+
+
+
+
               <label>Email</label>
               <input
                 type="email"
@@ -628,6 +650,8 @@ const saveCustomer = async () => {
               <p style={{ color: '#451a3d' }}><strong>Name:</strong> {selectedCustomer.name}</p>
               <p style={{ color: '#451a3d' }}><strong>Typ:</strong> {selectedCustomer.type}</p>
               <p style={{ color: '#451a3d' }}><strong>Adresse:</strong> {selectedCustomer.adress || '-'}</p>
+              <p style={{ color: '#451a3d' }}><strong>Land:</strong> {selectedCustomer.country || '-'}</p>
+
               <p style={{ color: '#451a3d' }}><strong>Status:</strong> {selectedCustomer.status}</p>
               <p style={{ color: '#451a3d' }}><strong>Betreuer:</strong> {selectedCustomerLeader ? `${selectedCustomerLeader.first_name} ${selectedCustomerLeader.last_name}` : '-'}</p>
             </div>
